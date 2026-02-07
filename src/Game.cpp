@@ -1,4 +1,5 @@
 #include "Game.hpp"
+#include "BossState.hpp"
 #include "raymath.h"
 #include <cstdlib>
 #include <ctime>
@@ -253,8 +254,8 @@ void Game::UpdatePlaying() {
     Vector3 cameraRight = m_cameraManager->GetRightDirection();
     m_player->UpdateWithCamera(deltaTime, cameraForward, cameraRight);
     
-    // Update boss
-    m_boss->Update(deltaTime);
+    // Update boss with player position for smooth rotation
+    m_boss->UpdateWithPlayer(m_player->GetPosition(), deltaTime);
     
     // Update player attack cooldown
     m_playerAttackCooldown -= deltaTime;
@@ -265,7 +266,17 @@ void Game::UpdatePlaying() {
         m_cameraManager->ToggleMode();
     }
     
-    // Handle player melee attack
+    // Toggle cursor lock with ESC key (for debugging or menu access)
+    if (IsKeyPressed(KEY_ESCAPE)) {
+        m_cameraManager->ToggleCursorLock();
+    }
+    
+    // Toggle boss debug hitbox with H key
+    if (IsKeyPressed(KEY_H)) {
+        m_boss->ToggleDebugHitbox();
+    }
+    
+    // Handle player attack
     if (IsKeyPressed(KEY_SPACE)) {
         HandlePlayerAttack();
     }
@@ -295,10 +306,14 @@ void Game::UpdatePlaying() {
         }
     }
     
-    // Handle boss attack
-    if (m_boss->CanAttack()) {
+    // Handle boss attack based on state machine
+    BossState bossState = m_boss->GetState();
+    if ((bossState == BossState::ATTACK_1 || 
+         bossState == BossState::ATTACK_2 || 
+         bossState == BossState::ATTACK_3) && 
+        m_boss->ShouldTriggerAttack()) {
         HandleBossAttack();
-        m_boss->ResetAttackCooldown();
+        m_boss->MarkAttackTriggered();
     }
     
     // Update projectiles
@@ -481,7 +496,7 @@ void Game::SpawnTomato() {
         if (!tomato->IsActive()) {
             float x = static_cast<float>(GetRandomValue(-ARENA_SIZE + 50, ARENA_SIZE - 50));
             float z = static_cast<float>(GetRandomValue(-ARENA_SIZE + 50, ARENA_SIZE - 50));
-            tomato->Spawn(x, 15.0f, z);
+            tomato->Spawn(x, 30.0f, z);  // Match player height for easier collection
             break;
         }
     }

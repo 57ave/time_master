@@ -17,10 +17,14 @@ A raylib game where time is your health! Fight a boss whose HP is represented by
 - Victory when it reaches 0
 
 ### Controls
-- **WASD** or **Arrow Keys**: Move your character
+- **Mouse**: Look around (camera control - cursor locked)
+- **WASD** or **Arrow Keys**: Move your character (camera-relative movement)
 - **SPACE**: Attack the boss (only works when you're close to the boss)
 - **ENTER**: Start game / Retry
-- **ESC**: Return to menu (from game over/victory screen)
+- **ESC**: Toggle cursor lock (unlock/lock mouse)
+- **C**: Toggle camera mode (third-person / static)
+- **H**: Toggle boss hitbox debug visualization
+- **Mouse Wheel**: Zoom in/out
 
 ### Gameplay Tips
 - Stay close to the boss to attack, but dodge its projectiles!
@@ -58,9 +62,14 @@ make clean
 ```
 
 ## Game Design
-- **Player**: Blue circle that moves around the arena
-- **Boss**: Red rectangle with glowing eyes that moves up and down
+- **Player**: Blue rectangular character (AABB collision) with camera-relative movement
+- **Boss**: Animated Plant Boss (3D GLTF model) with smooth rotation and state machine
+  - States: IDLE, ATTACK_1, ATTACK_2, ATTACK_3
+  - Smoothly rotates to face player
+  - 2.5x player size
 - **Tomatoes**: Red circles with green stems that appear randomly
 - **Boss Projectiles**: Orange circles that track your position
+- **Collision**: 3D rectangular AABB collision system
+- **Camera**: Third-person camera with mouse control (FPS-style locked cursor)
 
 Enjoy the game and master the time!
