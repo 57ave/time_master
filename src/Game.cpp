@@ -481,7 +481,7 @@ void Game::SpawnTomato() {
         if (!tomato->IsActive()) {
             float x = static_cast<float>(GetRandomValue(-ARENA_SIZE + 50, ARENA_SIZE - 50));
             float z = static_cast<float>(GetRandomValue(-ARENA_SIZE + 50, ARENA_SIZE - 50));
-            tomato->Spawn(x, 15.0f, z);
+            tomato->Spawn(x, 30.0f, z);  // Match player height for easier collection
             break;
         }
     }

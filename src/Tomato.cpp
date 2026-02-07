@@ -18,10 +18,15 @@ Tomato::Tomato()
 void Tomato::LoadModel() {
     if (!s_modelLoaded) {
         s_model = ::LoadModel("assets/models/scene.gltf");
-        if (s_model.meshCount > 0) {
+        // Check if model loaded successfully with valid meshes and materials
+        if (s_model.meshCount > 0 && s_model.meshes != nullptr) {
             s_modelLoaded = true;
+            TraceLog(LOG_INFO, "Tomato model loaded successfully");
         } else {
-            TraceLog(LOG_WARNING, "Failed to load tomato model");
+            TraceLog(LOG_WARNING, "Failed to load tomato model - using fallback rendering");
+            // Ensure the model is zeroed out if it failed to load
+            s_model = (Model){0};
+            s_modelLoaded = false;
         }
     }
 }
