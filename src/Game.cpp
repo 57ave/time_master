@@ -266,9 +266,6 @@ void Game::UpdatePlaying() {
         m_cameraManager->ToggleMode();
     }
     
-<<<<<<< HEAD
-    // Handle player melee attack
-=======
     // Toggle cursor lock with ESC key (for debugging or menu access)
     if (IsKeyPressed(KEY_ESCAPE)) {
         m_cameraManager->ToggleCursorLock();
@@ -280,7 +277,6 @@ void Game::UpdatePlaying() {
     }
     
     // Handle player attack
->>>>>>> 32930cc (add animation boss)
     if (IsKeyPressed(KEY_SPACE)) {
         HandlePlayerAttack();
     }
