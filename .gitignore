@@ -35,3 +35,8 @@
 # Fichiers générés divers #
 #################################
 # AJOUTER SELON LES BESOINS
+
+./obj
+*.o
+time_master
+
