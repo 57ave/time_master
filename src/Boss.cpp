@@ -31,7 +31,7 @@ Boss::~Boss() {
 }
 
 void Boss::LoadModel() {
-    const char* modelPath = "assets/plant_boss/scene.gltf";
+    const char* modelPath = "assets/models/plant_boss/scene.gltf";
     
     if (FileExists(modelPath)) {
         m_model = ::LoadModel(modelPath);  // Use global Raylib function
@@ -44,6 +44,19 @@ void Boss::LoadModel() {
         for (int i = 0; i < m_animationCount; i++) {
             printf("  Animation %d: %d frames\n", i, m_animations[i].frameCount);
         }
+        
+        // Print model bounds for debugging
+        BoundingBox bounds = GetModelBoundingBox(m_model);
+        printf("  Model bounds: min(%.2f, %.2f, %.2f) max(%.2f, %.2f, %.2f)\n",
+               bounds.min.x, bounds.min.y, bounds.min.z,
+               bounds.max.x, bounds.max.y, bounds.max.z);
+        Vector3 modelSize = {
+            bounds.max.x - bounds.min.x,
+            bounds.max.y - bounds.min.y,
+            bounds.max.z - bounds.min.z
+        };
+        printf("  Model size: (%.2f, %.2f, %.2f)\n", modelSize.x, modelSize.y, modelSize.z);
+        printf("  Using fixed scale: 12.0 (hitbox is for collision only, not visual sizing)\n");
     } else {
         printf("Warning: Boss model not found at %s\n", modelPath);
         m_modelLoaded = false;
@@ -262,17 +275,36 @@ void Boss::Draw() const {
     
     // Draw 3D model if loaded
     if (m_modelLoaded) {
-        // Scale the model to match hitbox size
-        Vector3 modelScale = {
-            m_size.x * 0.25f,  // Reduced to 0.25 (half of 0.5)
-            m_size.y * 0.25f,
-            m_size.z * 0.25f
-        };
+        // Get model bounds to calculate proper positioning
+        BoundingBox bounds = GetModelBoundingBox(m_model);
+        
+        // Calculate scale - the hitbox is in game units which are much larger than model units
+        // Use a reasonable scale factor instead of trying to match the huge hitbox
+        // A scale of ~10-15 should make the boss visible but not enormous
+        float uniformScale = 12.0f;  // Fixed scale for now, can adjust based on visual testing
+        
+        Vector3 modelScale = {uniformScale, uniformScale, uniformScale};
+        
+        // Adjust position to place model on ground
+        // The boss hitbox center is at m_position (200, 0, 0)
+        // But we want the model's bottom to touch the ground (y=0)
+        Vector3 drawPosition = m_position;
+        
+        // Calculate where the bottom of the scaled model would be relative to its center
+        float scaledModelBottom = bounds.min.y * uniformScale;
+        
+        // The model should be drawn so its bottom is at y=0 (ground level)
+        // Since the model's center is at origin, we need to lift it by -scaledModelBottom
+        drawPosition.y = -scaledModelBottom;
+        
+        // Keep X and Z from m_position for horizontal placement
+        drawPosition.x = m_position.x;
+        drawPosition.z = m_position.z;
         
         // Draw model with rotation
         DrawModelEx(
             m_model,
-            m_position,
+            drawPosition,
             {0.0f, 1.0f, 0.0f},  // Rotate around Y axis
             m_currentRotation,
             modelScale,
