@@ -10,7 +10,8 @@ Player::Player() {
 
 void Player::Reset() {
     auto& config = GameConfig::GetInstance();
-    m_position = {-200, 30, 0};
+    m_position = {-200, 100, 0};  // Start above arena to fall with gravity
+    m_velocity = {0, 0, 0};  // No initial velocity
     m_size = {40.0f, 60.0f, 40.0f};  // Width, Height, Depth - Rectangle!
     m_speed = config.playerSpeed;
     m_time = config.playerStartingTime;
@@ -30,10 +31,26 @@ void Player::Update(float deltaTime) {
     if (Vector3Length(movement) > 0) {
         Move(Vector3Normalize(movement), deltaTime);
     }
+    
+    // Apply gravity
+    m_velocity.y -= GRAVITY * deltaTime;
+    m_position.y += m_velocity.y * deltaTime;
+    
+    // Check collision with arena floor
+    float halfHeight = m_size.y / 2.0f;
+    float bottomY = m_position.y - halfHeight;
+    
+    if (bottomY <= ARENA_FLOOR_Y) {
+        // Player hit the ground
+        m_position.y = ARENA_FLOOR_Y + halfHeight;
+        m_velocity.y = 0;  // Stop falling
+    }
 }
 
 void Player::Move(Vector3 direction, float deltaTime) {
-    m_position = Vector3Add(m_position, Vector3Scale(direction, m_speed * deltaTime));
+    // Only move on horizontal plane (X and Z)
+    m_position.x += direction.x * m_speed * deltaTime;
+    m_position.z += direction.z * m_speed * deltaTime;
     
     // Keep player in bounds (consider half-width)
     float halfWidth = m_size.x / 2.0f;
@@ -41,7 +58,7 @@ void Player::Move(Vector3 direction, float deltaTime) {
     
     m_position.x = Clamp(m_position.x, -ARENA_SIZE + halfWidth, ARENA_SIZE - halfWidth);
     m_position.z = Clamp(m_position.z, -ARENA_SIZE + halfDepth, ARENA_SIZE - halfDepth);
-    m_position.y = 30.0f; // Keep at constant height
+    // Y position is now controlled by gravity in Update()
 }
 
 AABB Player::GetAABB() const {

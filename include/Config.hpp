@@ -10,6 +10,10 @@ constexpr int SCREEN_HEIGHT = 800;
 constexpr int MAX_TOMATOES = 5;
 constexpr int MAX_BOSS_PROJECTILES = 10;
 constexpr float ARENA_SIZE = 400.0f;
+constexpr float ARENA_WALL_THICKNESS = 10.0f;  // Thickness of arena walls for collision
+constexpr float ARENA_FLOOR_Y = -50.0f;  // Y position of arena floor where entities stand
+constexpr float ARENA_MODEL_Y = -200.0f;  // Y position where arena model is drawn (lower to account for model structure)
+constexpr float GRAVITY = 500.0f;  // Gravity acceleration
 
 // Fixed entity sizes
 constexpr float PLAYER_RADIUS = 20.0f;

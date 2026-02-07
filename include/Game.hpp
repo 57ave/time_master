@@ -31,6 +31,10 @@ private:
     std::unique_ptr<CameraManager> m_cameraManager;
     std::unique_ptr<HUD> m_hud;
     
+    // Arena model
+    Model m_arenaModel;
+    bool m_arenaModelLoaded;
+    
     // Spawn timers
     float m_tomatoSpawnTimer;
     float m_playerAttackCooldown;
