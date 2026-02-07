@@ -13,10 +13,11 @@ Projectile::Projectile()
 }
 
 void Projectile::Launch(Vector3 startPos, Vector3 targetPos) {
+    auto& config = GameConfig::GetInstance();
     m_position = startPos;
     Vector3 direction = Vector3Subtract(targetPos, startPos);
     direction = Vector3Normalize(direction);
-    m_velocity = Vector3Scale(direction, PROJECTILE_SPEED);
+    m_velocity = Vector3Scale(direction, config.projectileSpeed);
     m_active = true;
 }
 

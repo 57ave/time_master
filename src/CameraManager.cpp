@@ -2,6 +2,7 @@
 #include "Config.hpp"
 #include "raymath.h"
 #include <cmath>
+#include <cstdio>
 
 namespace TimeMaster {
 
@@ -12,10 +13,7 @@ CameraManager::CameraManager()
     , m_pitch(20.0f)
     , m_isThirdPerson(true)  // Start in third-person by default
     , m_mouseSensitivity(0.15f)
-    , m_cursorLocked(true) {
-    
-    // Disable cursor and lock it to the window for FPS-style control
-    DisableCursor();
+    , m_cursorLocked(false) {
     
     Reset();
 }
@@ -45,7 +43,7 @@ void CameraManager::UpdateThirdPerson(Vector3 playerPosition, float deltaTime) {
         return;
     }
     
-    // Handle mouse input for camera rotation (always active, no button needed)
+    // Always handle mouse input during third person mode
     HandleMouseInput(deltaTime);
     
     // Handle mouse wheel for zoom
@@ -73,22 +71,42 @@ void CameraManager::UpdateThirdPerson(Vector3 playerPosition, float deltaTime) {
 }
 
 void CameraManager::HandleMouseInput(float deltaTime) {
-    (void)deltaTime; // Not used for now
+    (void)deltaTime;
     
-    // Get mouse movement delta (works with disabled cursor)
+    // GetMouseDelta() returns raw mouse movement when cursor is disabled
     Vector2 mouseDelta = GetMouseDelta();
     
-    // Update angles based on mouse movement
-    m_angleAroundPlayer -= mouseDelta.x * m_mouseSensitivity;
-    m_pitch += mouseDelta.y * m_mouseSensitivity;  // Inverted: + instead of -
+    // Only take a small fraction of the delta to smooth out the movement
+    // This handles the case where raylib returns very large deltas
+    mouseDelta.x *= 0.01f;  // Take 1% of the delta
+    mouseDelta.y *= 0.01f;
     
-    // Clamp pitch to avoid flipping
-    if (m_pitch < 5.0f) m_pitch = 5.0f;
-    if (m_pitch > 80.0f) m_pitch = 80.0f;
+    // DEBUG: Print to see what's happening
+    static int frameCount = 0;
+    frameCount++;
+    if (frameCount % 60 == 0) {
+        printf("Camera: Delta=(%.2f, %.2f) | Angle=%.2f | Pitch=%.2f\n", 
+               mouseDelta.x, mouseDelta.y, m_angleAroundPlayer, m_pitch);
+        fflush(stdout);
+    }
     
-    // Wrap angle around player (optional, but keeps values clean)
-    while (m_angleAroundPlayer > 360.0f) m_angleAroundPlayer -= 360.0f;
+    // Apply sensitivity from config (using larger value since we scaled delta down)
+    float sensitivity = GameConfig::GetInstance().mouseSensitivity * 1000.0f;
+
+    // Update rotation angles
+    // Horizontal rotation (left-right)
+    m_angleAroundPlayer -= mouseDelta.x * sensitivity;
+    
+    // Wrap angle to keep it in a reasonable range (0-360 degrees)
     while (m_angleAroundPlayer < 0.0f) m_angleAroundPlayer += 360.0f;
+    while (m_angleAroundPlayer >= 360.0f) m_angleAroundPlayer -= 360.0f;
+    
+    // Vertical rotation (up-down)
+    m_pitch -= mouseDelta.y * sensitivity;
+    
+    // Clamp pitch to prevent camera flipping
+    if (m_pitch < 10.0f) m_pitch = 10.0f;
+    if (m_pitch > 85.0f) m_pitch = 85.0f;
 }
 
 Vector3 CameraManager::GetForwardDirection() const {
@@ -121,19 +139,24 @@ void CameraManager::AdjustDistance(float delta) {
 }
 
 void CameraManager::ToggleCursorLock() {
-    if (m_cursorLocked) {
+    if (IsCursorHidden()) {
         // Unlock cursor
         EnableCursor();
         m_cursorLocked = false;
     } else {
         // Lock cursor
         DisableCursor();
+        GetMouseDelta(); // Clear any accumulated mouse delta
         m_cursorLocked = true;
     }
 }
 
 bool CameraManager::IsCursorLocked() const {
     return m_cursorLocked;
+}
+
+void CameraManager::SetMouseSensitivity(float sensitivity) {
+    m_mouseSensitivity = sensitivity;
 }
 
 } // namespace TimeMaster

@@ -3,6 +3,10 @@
 
 namespace TimeMaster {
 
+// Static member initialization
+Model Tomato::s_model = {0};
+bool Tomato::s_modelLoaded = false;
+
 Tomato::Tomato() 
     : m_position{0, 0, 0}
     , m_radius(TOMATO_RADIUS)
@@ -11,10 +15,29 @@ Tomato::Tomato()
     , m_active(false) {
 }
 
+void Tomato::LoadModel() {
+    if (!s_modelLoaded) {
+        s_model = ::LoadModel("assets/models/scene.gltf");
+        if (s_model.meshCount > 0) {
+            s_modelLoaded = true;
+        } else {
+            TraceLog(LOG_WARNING, "Failed to load tomato model");
+        }
+    }
+}
+
+void Tomato::UnloadModel() {
+    if (s_modelLoaded) {
+        ::UnloadModel(s_model);
+        s_modelLoaded = false;
+    }
+}
+
 void Tomato::Spawn(float x, float y, float z) {
+    auto& config = GameConfig::GetInstance();
     m_position = {x, y, z};
     m_active = true;
-    m_lifetime = TOMATO_LIFETIME;
+    m_lifetime = config.tomatoLifetime;
     m_rotationAngle = 0.0f;
 }
 
@@ -32,16 +55,20 @@ void Tomato::Update(float deltaTime) {
 void Tomato::Draw() const {
     if (!m_active) return;
     
-    // Draw tomato body
-    DrawSphere(m_position, m_radius, RED);
-    
-    // Draw stem
-    Vector3 stemPos = {
-        m_position.x, 
-        m_position.y + m_radius * 0.8f, 
-        m_position.z
-    };
-    DrawSphere(stemPos, m_radius * 0.3f, GREEN);
+    if (s_modelLoaded) {
+        DrawModelEx(s_model, m_position, {0, 1, 0}, m_rotationAngle, {m_radius, m_radius, m_radius}, WHITE);
+    } else {
+        // Fallback to sphere if model not loaded
+        DrawSphere(m_position, m_radius, RED);
+        
+        // Draw stem
+        Vector3 stemPos = {
+            m_position.x, 
+            m_position.y + m_radius * 0.8f, 
+            m_position.z
+        };
+        DrawSphere(stemPos, m_radius * 0.3f, GREEN);
+    }
 }
 
 void Tomato::OnCollect() {

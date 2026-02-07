@@ -81,6 +81,16 @@ public:
      * @brief Check if cursor is locked
      */
     bool IsCursorLocked() const;
+    
+    /**
+     * @brief Set mouse sensitivity
+     */
+    void SetMouseSensitivity(float sensitivity);
+    
+    /**
+     * @brief Get mouse sensitivity
+     */
+    float GetMouseSensitivity() const { return m_mouseSensitivity; }
 };
 
 } // namespace TimeMaster

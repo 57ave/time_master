@@ -11,9 +11,10 @@ Boss::Boss() {
 }
 
 void Boss::Reset() {
+    auto& config = GameConfig::GetInstance();
     m_position = {200, 80, 0};
     m_size = {BOSS_WIDTH, BOSS_HEIGHT, BOSS_DEPTH};  // Use Vector3 for size
-    m_time = BOSS_STARTING_TIME;
+    m_time = config.bossStartingTime;
     m_isAlive = true;
     m_attackCooldown = 0.0f;
     m_moveTimer = 0.0f;
@@ -89,9 +90,10 @@ bool Boss::CanAttack() const {
 }
 
 void Boss::ResetAttackCooldown() {
+    auto& config = GameConfig::GetInstance();
     float random = static_cast<float>(GetRandomValue(0, 100)) / 100.0f;
-    m_attackCooldown = BOSS_ATTACK_COOLDOWN_MIN + 
-                       random * (BOSS_ATTACK_COOLDOWN_MAX - BOSS_ATTACK_COOLDOWN_MIN);
+    m_attackCooldown = config.bossAttackCooldownMin + 
+                       random * (config.bossAttackCooldownMax - config.bossAttackCooldownMin);
 }
 
 AABB Boss::GetAABB() const {

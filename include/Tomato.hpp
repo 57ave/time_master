@@ -13,8 +13,21 @@ private:
     float m_rotationAngle;
     bool m_active;
     
+    static Model s_model;
+    static bool s_modelLoaded;
+    
 public:
     Tomato();
+    
+    /**
+     * @brief Load shared tomato model (call once)
+     */
+    static void LoadModel();
+    
+    /**
+     * @brief Unload shared tomato model (call once on cleanup)
+     */
+    static void UnloadModel();
     
     // Entity interface
     void Update(float deltaTime) override;

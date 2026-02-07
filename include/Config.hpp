@@ -2,43 +2,89 @@
 
 namespace TimeMaster {
 
-// Screen configuration
+// Screen configuration (fixed)
 constexpr int SCREEN_WIDTH = 1200;
 constexpr int SCREEN_HEIGHT = 800;
 
-// Game configuration
+// Game configuration (fixed)
 constexpr int MAX_TOMATOES = 5;
 constexpr int MAX_BOSS_PROJECTILES = 10;
 constexpr float ARENA_SIZE = 400.0f;
 
-// Player configuration
+// Fixed entity sizes
 constexpr float PLAYER_RADIUS = 20.0f;
-constexpr float PLAYER_SPEED = 150.0f;
-constexpr float PLAYER_STARTING_TIME = 60.0f;
-constexpr float PLAYER_MAX_TIME = 120.0f;
-constexpr float PLAYER_DAMAGE_PER_HIT = 5.0f;
-
-// Boss configuration
 constexpr float BOSS_WIDTH = 60.0f;
 constexpr float BOSS_HEIGHT = 80.0f;
 constexpr float BOSS_DEPTH = 60.0f;
-constexpr float BOSS_STARTING_TIME = 300.0f;
-constexpr float BOSS_DAMAGE_PER_HIT = 3.0f;
-constexpr float BOSS_ATTACK_COOLDOWN_MIN = 1.5f;
-constexpr float BOSS_ATTACK_COOLDOWN_MAX = 2.5f;
-
-// Tomato configuration
 constexpr float TOMATO_RADIUS = 12.0f;
-constexpr float TOMATO_LIFETIME = 8.0f;
-constexpr float TOMATO_HEAL_AMOUNT = 5.0f;
-
-// Projectile configuration
 constexpr float PROJECTILE_RADIUS = 8.0f;
-constexpr float PROJECTILE_SPEED = 200.0f;
 
-// Camera configuration
+// Fixed camera settings
 constexpr float CAMERA_DISTANCE = 400.0f;
 constexpr float CAMERA_HEIGHT = 300.0f;
 constexpr float CAMERA_FOV = 45.0f;
+
+/**
+ * @brief Singleton class to manage configurable game settings
+ */
+class GameConfig {
+public:
+    // Player settings
+    float playerSpeed = 150.0f;
+    float playerStartingTime = 60.0f;
+    float playerMaxTime = 120.0f;
+    float playerDamagePerHit = 5.0f;
+    
+    // Boss settings
+    float bossStartingTime = 300.0f;
+    float bossDamagePerHit = 3.0f;
+    float bossAttackCooldownMin = 1.5f;
+    float bossAttackCooldownMax = 2.5f;
+    
+    // Tomato settings
+    float tomatoLifetime = 8.0f;
+    float tomatoHealAmount = 5.0f;
+    
+    // Projectile settings
+    float projectileSpeed = 200.0f;
+    
+    // Camera settings
+    float mouseSensitivity = 0.002f;
+    
+    /**
+     * @brief Get the singleton instance
+     */
+    static GameConfig& GetInstance() {
+        static GameConfig instance;
+        return instance;
+    }
+    
+    /**
+     * @brief Reset all settings to default values
+     */
+    void ResetToDefaults() {
+        playerSpeed = 150.0f;
+        playerStartingTime = 60.0f;
+        playerMaxTime = 120.0f;
+        playerDamagePerHit = 5.0f;
+        
+        bossStartingTime = 300.0f;
+        bossDamagePerHit = 3.0f;
+        bossAttackCooldownMin = 1.5f;
+        bossAttackCooldownMax = 2.5f;
+        
+        tomatoLifetime = 8.0f;
+        tomatoHealAmount = 5.0f;
+        
+        projectileSpeed = 200.0f;
+        
+        mouseSensitivity = 0.002f;
+    }
+    
+private:
+    GameConfig() = default;
+    GameConfig(const GameConfig&) = delete;
+    GameConfig& operator=(const GameConfig&) = delete;
+};
 
 } // namespace TimeMaster

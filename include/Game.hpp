@@ -24,7 +24,8 @@ private:
     std::unique_ptr<Player> m_player;
     std::unique_ptr<Boss> m_boss;
     std::vector<std::unique_ptr<Tomato>> m_tomatoes;
-    std::vector<std::unique_ptr<Projectile>> m_projectiles;
+    std::vector<std::unique_ptr<Projectile>> m_projectiles;       // Boss projectiles
+    std::vector<std::unique_ptr<Projectile>> m_playerProjectiles; // Player projectiles
     
     // Systems
     std::unique_ptr<CameraManager> m_cameraManager;
@@ -32,6 +33,10 @@ private:
     
     // Spawn timers
     float m_tomatoSpawnTimer;
+    float m_playerAttackCooldown;
+    
+    // Settings menu state
+    int m_selectedSetting;
     
 public:
     Game();
@@ -60,6 +65,7 @@ public:
 private:
     // State-specific updates
     void UpdateMenu();
+    void UpdateSettings();
     void UpdatePlaying();
     void UpdatePaused();
     void UpdateGameOver();
@@ -67,6 +73,7 @@ private:
     
     // State-specific rendering
     void DrawMenu();
+    void DrawSettings();
     void DrawPlaying();
     void DrawPaused();
     void DrawGameOver();

@@ -4,6 +4,7 @@ namespace TimeMaster {
 
 enum class GameState {
     MENU,
+    SETTINGS,
     PLAYING,
     PAUSED,
     GAME_OVER,

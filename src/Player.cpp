@@ -9,10 +9,11 @@ Player::Player() {
 }
 
 void Player::Reset() {
+    auto& config = GameConfig::GetInstance();
     m_position = {-200, 30, 0};
     m_size = {40.0f, 60.0f, 40.0f};  // Width, Height, Depth - Rectangle!
-    m_speed = PLAYER_SPEED;
-    m_time = PLAYER_STARTING_TIME;
+    m_speed = config.playerSpeed;
+    m_time = config.playerStartingTime;
     m_isAlive = true;
     m_color = BLUE;
 }
@@ -79,9 +80,10 @@ void Player::TakeDamage(float damage) {
 }
 
 void Player::Heal(float amount) {
+    auto& config = GameConfig::GetInstance();
     m_time += amount;
-    if (m_time > PLAYER_MAX_TIME) {
-        m_time = PLAYER_MAX_TIME;
+    if (m_time > config.playerMaxTime) {
+        m_time = config.playerMaxTime;
     }
 }
 
