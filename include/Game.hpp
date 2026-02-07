@@ -6,6 +6,7 @@
 #include "Projectile.hpp"
 #include "CameraManager.hpp"
 #include "HUD.hpp"
+#include "Collision.hpp"
 #include <vector>
 #include <memory>
 

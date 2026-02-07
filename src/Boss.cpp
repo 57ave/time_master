@@ -1,4 +1,5 @@
 #include "Boss.hpp"
+#include "Player.hpp"
 #include "raymath.h"
 #include <cstdio>
 #include <cstdlib>
@@ -11,9 +12,7 @@ Boss::Boss() {
 
 void Boss::Reset() {
     m_position = {200, 80, 0};
-    m_width = BOSS_WIDTH;
-    m_height = BOSS_HEIGHT;
-    m_depth = BOSS_DEPTH;
+    m_size = {BOSS_WIDTH, BOSS_HEIGHT, BOSS_DEPTH};  // Use Vector3 for size
     m_time = BOSS_STARTING_TIME;
     m_isAlive = true;
     m_attackCooldown = 0.0f;
@@ -29,12 +28,12 @@ void Boss::Update(float deltaTime) {
     m_position = Vector3Add(m_position, Vector3Scale(m_velocity, deltaTime));
     
     // Bounce off arena boundaries
-    if (m_position.z <= -ARENA_SIZE / 2 + m_depth / 2 || 
-        m_position.z >= ARENA_SIZE / 2 - m_depth / 2) {
+    if (m_position.z <= -ARENA_SIZE / 2 + m_size.z / 2 || 
+        m_position.z >= ARENA_SIZE / 2 - m_size.z / 2) {
         m_velocity.z *= -1;
     }
-    if (m_position.x <= -ARENA_SIZE / 2 + m_width / 2 || 
-        m_position.x >= ARENA_SIZE / 2 - m_width / 2) {
+    if (m_position.x <= -ARENA_SIZE / 2 + m_size.x / 2 || 
+        m_position.x >= ARENA_SIZE / 2 - m_size.x / 2) {
         m_velocity.x *= -1;
     }
     
@@ -55,20 +54,20 @@ void Boss::Update(float deltaTime) {
 void Boss::Draw() const {
     if (!m_isAlive) return;
     
-    // Draw main body
-    DrawCube(m_position, m_width, m_height, m_depth, m_color);
-    DrawCubeWires(m_position, m_width, m_height, m_depth, DARKBROWN);
+    // Draw main body using m_size
+    DrawCube(m_position, m_size.x, m_size.y, m_size.z, m_color);
+    DrawCubeWires(m_position, m_size.x, m_size.y, m_size.z, DARKBROWN);
     
     // Draw eyes
     Vector3 leftEye = {
-        m_position.x - m_width * 0.2f, 
-        m_position.y + m_height * 0.2f, 
-        m_position.z - m_depth * 0.51f
+        m_position.x - m_size.x * 0.2f, 
+        m_position.y + m_size.y * 0.2f, 
+        m_position.z - m_size.z * 0.51f
     };
     Vector3 rightEye = {
-        m_position.x + m_width * 0.2f, 
-        m_position.y + m_height * 0.2f, 
-        m_position.z - m_depth * 0.51f
+        m_position.x + m_size.x * 0.2f, 
+        m_position.y + m_size.y * 0.2f, 
+        m_position.z - m_size.z * 0.51f
     };
     
     DrawSphere(leftEye, 5.0f, BLACK);
@@ -95,15 +94,24 @@ void Boss::ResetAttackCooldown() {
                        random * (BOSS_ATTACK_COOLDOWN_MAX - BOSS_ATTACK_COOLDOWN_MIN);
 }
 
-BoundingBox Boss::GetBoundingBox() const {
-    return {
-        {m_position.x - m_width / 2, m_position.y - m_height / 2, m_position.z - m_depth / 2},
-        {m_position.x + m_width / 2, m_position.y + m_height / 2, m_position.z + m_depth / 2}
-    };
+AABB Boss::GetAABB() const {
+    Vector3 halfExtents = Vector3Scale(m_size, 0.5f);
+    return AABB::FromCenter(m_position, halfExtents);
+}
+
+void Boss::ApplyPushback(Vector3 pushback) {
+    m_position = Vector3Add(m_position, pushback);
+    
+    // Keep in bounds after pushback
+    float halfWidth = m_size.x / 2.0f;
+    float halfDepth = m_size.z / 2.0f;
+    
+    m_position.x = Clamp(m_position.x, -ARENA_SIZE / 2 + halfWidth, ARENA_SIZE / 2 - halfWidth);
+    m_position.z = Clamp(m_position.z, -ARENA_SIZE / 2 + halfDepth, ARENA_SIZE / 2 - halfDepth);
 }
 
 bool Boss::CheckCollisionWithPlayer(const Player& player) const {
-    return CheckCollisionBoxSphere(GetBoundingBox(), player.GetPosition(), player.GetRadius());
+    return GetAABB().Intersects(player.GetAABB());
 }
 
 std::string Boss::GetTimeString() const {

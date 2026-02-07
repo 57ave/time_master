@@ -1,18 +1,19 @@
 #pragma once
 #include "Entity.hpp"
 #include "Config.hpp"
-#include "Player.hpp"
+#include "Collision.hpp"
 #include "raylib.h"
 
 namespace TimeMaster {
+
+// Forward declaration
+class Player;
 
 class Boss : public Entity, public IDamageable, public ITimedEntity {
 private:
     Vector3 m_position;
     Vector3 m_velocity;
-    float m_width;
-    float m_height;
-    float m_depth;
+    Vector3 m_size;  // Width, Height, Depth
     float m_time;
     float m_attackCooldown;
     float m_moveTimer;
@@ -42,7 +43,12 @@ public:
     bool CanAttack() const;
     void ResetAttackCooldown();
     bool CheckCollisionWithPlayer(const Player& player) const;
-    BoundingBox GetBoundingBox() const;
+    
+    // Collision
+    AABB GetAABB() const;
+    void ApplyPushback(Vector3 pushback);
+    Vector3 GetSize() const { return m_size; }
+    void SetPosition(Vector3 position) { m_position = position; }
 };
 
 } // namespace TimeMaster

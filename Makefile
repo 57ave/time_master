@@ -1,7 +1,22 @@
+# Detect OS
+UNAME_S := $(shell uname -s)
+
 # Compiler settings
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -O2 -Iinclude
-LDFLAGS = -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+CXXFLAGS = -std=c++17 -Wall -Wextra -O2 -Iinclude -Wno-missing-field-initializers
+
+# Platform-specific settings
+ifeq ($(UNAME_S),Darwin)
+    # macOS
+    CXXFLAGS += -I/opt/homebrew/include
+    LDFLAGS = -L/opt/homebrew/lib -lraylib -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL
+else ifeq ($(UNAME_S),Linux)
+    # Linux
+    LDFLAGS = -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+else
+    # Windows (MinGW)
+    LDFLAGS = -lraylib -lopengl32 -lgdi32 -lwinmm
+endif
 
 # Directories
 SRC_DIR = src

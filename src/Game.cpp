@@ -103,16 +103,44 @@ void Game::UpdateMenu() {
 void Game::UpdatePlaying() {
     float deltaTime = GetFrameTime();
     
-    // Update player
-    m_player->Update(deltaTime);
+    // Update camera to follow player with mouse control
+    m_cameraManager->UpdateThirdPerson(m_player->GetPosition(), deltaTime);
+    
+    // Update player with camera-relative movement
+    Vector3 cameraForward = m_cameraManager->GetForwardDirection();
+    Vector3 cameraRight = m_cameraManager->GetRightDirection();
+    m_player->UpdateWithCamera(deltaTime, cameraForward, cameraRight);
+    
+    // Update boss
+    m_boss->Update(deltaTime);
+    
+    // Toggle camera mode with C key
+    if (IsKeyPressed(KEY_C)) {
+        m_cameraManager->ToggleMode();
+    }
+    
+    // Toggle cursor lock with ESC key (for debugging or menu access)
+    if (IsKeyPressed(KEY_ESCAPE)) {
+        m_cameraManager->ToggleCursorLock();
+    }
     
     // Handle player attack
     if (IsKeyPressed(KEY_SPACE)) {
         HandlePlayerAttack();
     }
     
-    // Update boss
-    m_boss->Update(deltaTime);
+    // Resolve collision between player and boss (prevent overlap)
+    if (m_player->IsAlive() && m_boss->IsAlive()) {
+        AABB playerAABB = m_player->GetAABB();
+        AABB bossAABB = m_boss->GetAABB();
+        
+        CollisionResolution collision = ResolveAABBCollision(playerAABB, bossAABB);
+        if (collision.hasCollision) {
+            // Push the player away from the boss
+            // We push only the player to keep the boss movement stable
+            m_player->ApplyPushback(collision.pushback);
+        }
+    }
     
     // Handle boss attack
     if (m_boss->CanAttack()) {
@@ -250,7 +278,7 @@ void Game::UpdateProjectiles(float deltaTime) {
     for (auto& projectile : m_projectiles) {
         projectile->Update(deltaTime);
         
-        if (projectile->CheckCollision(m_player->GetPosition(), m_player->GetRadius())) {
+        if (projectile->CheckCollision(m_player->GetPosition(), m_player->GetApproxRadius())) {
             m_player->TakeDamage(PLAYER_DAMAGE_PER_HIT);
         }
     }
@@ -264,7 +292,7 @@ void Game::UpdateTomatoes(float deltaTime) {
 
 void Game::CheckTomatoCollection() {
     for (auto& tomato : m_tomatoes) {
-        if (tomato->CheckCollision(m_player->GetPosition(), m_player->GetRadius())) {
+        if (tomato->CheckCollision(m_player->GetPosition(), m_player->GetApproxRadius())) {
             m_player->Heal(TOMATO_HEAL_AMOUNT);
             tomato->OnCollect();
         }
