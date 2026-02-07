@@ -17,7 +17,7 @@ Tomato::Tomato()
 
 void Tomato::LoadModel() {
     if (!s_modelLoaded) {
-        s_model = ::LoadModel("assets/models/scene.gltf");
+        s_model = ::LoadModel("assets/models/tomato/scene.gltf");
         // Check if model loaded successfully with valid meshes and materials
         if (s_model.meshCount > 0 && s_model.meshes != nullptr) {
             s_modelLoaded = true;
