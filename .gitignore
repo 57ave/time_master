@@ -1,0 +1,37 @@
+#################################
+# Fichiers générés par Unreal Engine #
+#################################
+/[Bb]uild
+/[Bb]uilds
+/Binaries
+/DerivedDataCache
+/Intermediate
+/Saved
+
+#################################
+# Fichiers générés par Visual Studio #
+#################################
+# Répertoire de cache
+.vs
+# Fichiers spécifiques à l'utilisateur
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+# Fichiers de cache CPP
+*.VC.db
+*.opendb
+*.opensdf
+*.sdf
+# Fichiers de solution
+*.sln
+# Répertoire de cache VSCode
+.vscode
+# Fichiers d'historique VSCode
+**/.history
+
+#################################
+# Fichiers générés divers #
+#################################
+# AJOUTER SELON LES BESOINS
