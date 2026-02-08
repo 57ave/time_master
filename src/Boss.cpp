@@ -74,7 +74,8 @@ void Boss::UnloadModel() {
 
 void Boss::Reset() {
     auto& config = GameConfig::GetInstance();
-    m_size = {BOSS_WIDTH * 2.5f, BOSS_HEIGHT * 2.5f, BOSS_DEPTH * 2.5f};  // 2.5x player size
+    // Reduced hitbox to match visual scale better
+    m_size = {BOSS_WIDTH * 0.8f, BOSS_HEIGHT * 0.8f, BOSS_DEPTH * 0.8f};
     float halfHeight = m_size.y / 2.0f;
     m_position = {200, halfHeight + 5.0f, 0};  // Above ground to avoid visual collision with arena thickness
     m_time = config.bossStartingTime;
