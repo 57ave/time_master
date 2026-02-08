@@ -39,12 +39,17 @@ void Player::LoadModel() {
             s_animations = ::LoadModelAnimations(modelPath, &s_animationCount);
             s_modelLoaded = true;
 
-            TraceLog(LOG_INFO, "Player model loaded with %d animations", s_animationCount);
+            printf("\n======================================\n");
+            printf("Player model loaded successfully!\n");
+            printf("  Animations found: %d\n", s_animationCount);
+            printf("======================================\n");
+            fflush(stdout);
 
             for (int i = 0; i < s_animationCount; i++) {
-                TraceLog(LOG_INFO, "  Animation %d: %s (%d frames)",
-                         i, s_animations[i].name, s_animations[i].frameCount);
+                printf("  Animation %d: %s (%d frames)\n",
+                       i, s_animations[i].name, s_animations[i].frameCount);
             }
+            fflush(stdout);
 
             for (int i = 0; i < s_model.materialCount; i++) {
                 if (s_model.materials[i].maps[MATERIAL_MAP_DIFFUSE].texture.id > 0) {
@@ -55,6 +60,8 @@ void Player::LoadModel() {
                 }
             }
         } else {
+            printf("Warning: Player model not found or invalid at %s\n", modelPath);
+            fflush(stdout);
             s_model = (Model){0};
             s_modelLoaded = false;
         }
@@ -118,51 +125,82 @@ void Player::Update(float deltaTime) {
         m_velocity.y = 0;
     }
 
-    // Animation
+    // Animation system (similar to Boss)
     if (s_modelLoaded && s_animationCount > 0) {
+        // Find animation indices by name (only search once)
         static int idleAnim = -1;
         static int walkAnim = -1;
         static int runAnim  = -1;
+        static bool animsSearched = false;
 
-        if (idleAnim == -1) {
+        if (!animsSearched) {
+            animsSearched = true;
             for (int i = 0; i < s_animationCount; i++) {
                 const char* name = s_animations[i].name;
-                if (strstr(name, "Idle") || strstr(name, "idle")) idleAnim = i;
-                if (strstr(name, "Walk") || strstr(name, "walk")) walkAnim = i;
-                if (strstr(name, "Run")  || strstr(name, "run"))  runAnim  = i;
+                // Match exact animation names (check for exact match or ending with the name)
+                // This prevents matching "Walking_with_things" when we want just "Walking"
+                if (strstr(name, "|Idle") && idleAnim == -1) idleAnim = i;
+                else if (strstr(name, "|Walking") && !strstr(name, "Walking_with") && walkAnim == -1) walkAnim = i;
+                else if ((strstr(name, "|RunCasual") || strstr(name, "|training_run")) && runAnim == -1) runAnim = i;
             }
+            
+            // Print found animations for debugging
+            printf("\n======================================\n");
+            printf("Player animations found: Idle=%d, Walking=%d, Run=%d\n", 
+                   idleAnim, walkAnim, runAnim);
+            printf("======================================\n");
+            fflush(stdout);
         }
 
-        int animIndex = (idleAnim >= 0) ? idleAnim : 0;
+        // Choose animation based on player state
+        int animIndex = (idleAnim >= 0) ? idleAnim : 0;  // Default to idle
+        bool shouldLoop = true;  // All player animations should loop
 
         if (m_isMoving) {
-            if (m_isRunning && runAnim >= 0) animIndex = runAnim;
-            else if (walkAnim >= 0) animIndex = walkAnim;
-        }
-
-        if (animIndex >= s_animationCount) animIndex = 0;
-
-        if (animIndex != m_currentAnimIndex) {
-            m_currentAnimIndex = animIndex;
-            m_currentAnimFrame = 0;
-            m_animTimer = 0.0f;
-        }
-
-        m_animTimer += deltaTime;
-        if (m_animTimer >= (1.0f / 30.0f)) {
-            m_animTimer = 0.0f;
-            m_currentAnimFrame++;
-
-            if (m_currentAnimFrame >= s_animations[m_currentAnimIndex].frameCount) {
-                m_currentAnimFrame = 0;
+            if (m_isRunning && runAnim >= 0) {
+                animIndex = runAnim;
+            } else if (walkAnim >= 0) {
+                animIndex = walkAnim;
             }
-
-            UpdateModelAnimation(
-                s_model,
-                s_animations[m_currentAnimIndex],
-                m_currentAnimFrame
-            );
         }
+
+        // Make sure animIndex is valid
+        if (animIndex >= s_animationCount) {
+            animIndex = 0;
+        }
+
+        // Reset animation timer if we changed animation
+        if (m_currentAnimIndex != animIndex) {
+            m_currentAnimIndex = animIndex;
+            m_animTimer = 0.0f;
+            m_currentAnimFrame = 0;
+            printf("Player: Switching to animation %d\n", animIndex);
+            fflush(stdout);
+        }
+
+        // Calculate animation frame based on time (similar to Boss system)
+        // Get the FPS of this animation (assuming 30 FPS as standard for player animations)
+        float animFPS = 30.0f;
+        m_animTimer += deltaTime;
+        
+        if (shouldLoop) {
+            // Loop animation
+            float animDuration = s_animations[animIndex].frameCount / animFPS;
+            while (m_animTimer >= animDuration) {
+                m_animTimer -= animDuration;
+            }
+        }
+        
+        // Calculate current frame from timer
+        m_currentAnimFrame = (int)(m_animTimer * animFPS);
+        
+        // Clamp to valid frame range
+        if (m_currentAnimFrame >= s_animations[animIndex].frameCount) {
+            m_currentAnimFrame = s_animations[animIndex].frameCount - 1;
+        }
+        
+        // Update the model animation
+        UpdateModelAnimation(s_model, s_animations[animIndex], m_currentAnimFrame);
     }
 }
 
@@ -271,7 +309,9 @@ void Player::UpdateWithCamera(float deltaTime, Vector3 cameraForward, Vector3 ca
     if (left)     movement = Vector3Subtract(movement, cameraRight);
     if (right)    movement = Vector3Add(movement, cameraRight);
 
-    if (Vector3Length(movement) > 0.0f) {
+    m_isMoving = (Vector3Length(movement) > 0.0f);
+
+    if (m_isMoving) {
         float originalSpeed = m_speed;
         m_speed = m_isRunning ? m_speed * 1.8f : m_speed;
 
@@ -280,6 +320,95 @@ void Player::UpdateWithCamera(float deltaTime, Vector3 cameraForward, Vector3 ca
         m_speed = originalSpeed;
         m_rotationAngle = atan2f(movement.x, movement.z) * RAD2DEG;
     }
+    
+    // Gravity
+    m_velocity.y -= GRAVITY * deltaTime;
+    m_position.y += m_velocity.y * deltaTime;
+
+    float halfHeight = m_size.y / 2.0f;
+    if (m_position.y - halfHeight <= 5.0f) {
+        m_position.y = halfHeight + 5.0f;
+        m_velocity.y = 0;
+    }
+
+    // Animation system (similar to Boss)
+    if (s_modelLoaded && s_animationCount > 0) {
+        // Find animation indices by name (only search once)
+        static int idleAnim = -1;
+        static int walkAnim = -1;
+        static int runAnim  = -1;
+        static bool animsSearched = false;
+
+        if (!animsSearched) {
+            animsSearched = true;
+            for (int i = 0; i < s_animationCount; i++) {
+                const char* name = s_animations[i].name;
+                // Match exact animation names (check for exact match or ending with the name)
+                // This prevents matching "Walking_with_things" when we want just "Walking"
+                if (strstr(name, "|Idle") && idleAnim == -1) idleAnim = i;
+                else if (strstr(name, "|Walking") && !strstr(name, "Walking_with") && walkAnim == -1) walkAnim = i;
+                else if ((strstr(name, "|RunCasual") || strstr(name, "|training_run")) && runAnim == -1) runAnim = i;
+            }
+            
+            // Print found animations for debugging
+            printf("\n======================================\n");
+            printf("Player animations found: Idle=%d, Walking=%d, Run=%d\n", 
+                   idleAnim, walkAnim, runAnim);
+            printf("======================================\n");
+            fflush(stdout);
+        }
+
+        // Choose animation based on player state
+        int animIndex = (idleAnim >= 0) ? idleAnim : 0;  // Default to idle
+        bool shouldLoop = true;  // All player animations should loop
+
+        if (m_isMoving) {
+            if (m_isRunning && runAnim >= 0) {
+                animIndex = runAnim;
+            } else if (walkAnim >= 0) {
+                animIndex = walkAnim;
+            }
+        }
+
+        // Make sure animIndex is valid
+        if (animIndex >= s_animationCount) {
+            animIndex = 0;
+        }
+
+        // Reset animation timer if we changed animation
+        if (m_currentAnimIndex != animIndex) {
+            m_currentAnimIndex = animIndex;
+            m_animTimer = 0.0f;
+            m_currentAnimFrame = 0;
+            printf("Player: Switching to animation %d\n", animIndex);
+            fflush(stdout);
+        }
+
+        // Calculate animation frame based on time (similar to Boss system)
+        // Get the FPS of this animation (assuming 30 FPS as standard for player animations)
+        float animFPS = 30.0f;
+        m_animTimer += deltaTime;
+        
+        if (shouldLoop) {
+            // Loop animation
+            float animDuration = s_animations[animIndex].frameCount / animFPS;
+            while (m_animTimer >= animDuration) {
+                m_animTimer -= animDuration;
+            }
+        }
+        
+        // Calculate current frame from timer
+        m_currentAnimFrame = (int)(m_animTimer * animFPS);
+        
+        // Clamp to valid frame range
+        if (m_currentAnimFrame >= s_animations[animIndex].frameCount) {
+            m_currentAnimFrame = s_animations[animIndex].frameCount - 1;
+        }
+        
+        // Update the model animation
+        UpdateModelAnimation(s_model, s_animations[animIndex], m_currentAnimFrame);
+    }
 }
 
 } // namespace TimeMaster
+
