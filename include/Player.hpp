@@ -21,6 +21,7 @@ private:
     int m_currentAnimIndex;
     float m_animTimer;
     bool m_isMoving;
+    float m_rotationAngle;  // Rotation angle to face camera
     
     // Static model (shared by all players, though typically only one exists)
     static Model s_model;
@@ -75,6 +76,7 @@ public:
     // Movement
     void Move(Vector3 direction, float deltaTime);
     void SetPosition(Vector3 position) { m_position = position; }
+    void SetCameraAngle(float angle) { m_rotationAngle = angle; }
     void UpdateWithCamera(float deltaTime, Vector3 cameraForward, Vector3 cameraRight);
 };
 

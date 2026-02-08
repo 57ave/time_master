@@ -91,6 +91,11 @@ public:
      * @brief Get mouse sensitivity
      */
     float GetMouseSensitivity() const { return m_mouseSensitivity; }
+    
+    /**
+     * @brief Get the camera's horizontal angle around the player (in degrees)
+     */
+    float GetAngleAroundPlayer() const { return m_angleAroundPlayer; }
 };
 
 } // namespace TimeMaster

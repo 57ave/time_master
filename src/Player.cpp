@@ -14,7 +14,8 @@ Player::Player()
     : m_currentAnimFrame(0)
     , m_currentAnimIndex(-1)
     , m_animTimer(0.0f)
-    , m_isMoving(false) {
+    , m_isMoving(false)
+    , m_rotationAngle(0.0f) {
     Reset();
 }
 
@@ -31,6 +32,18 @@ void Player::LoadModel() {
             s_modelLoaded = true;
             TraceLog(LOG_INFO, "Player model loaded successfully with %d animations", s_animationCount);
             TraceLog(LOG_INFO, "Player model has %d materials", s_model.materialCount);
+            
+            // Manually load textures for materials
+            Texture2D diffuseTexture = ::LoadTexture("assets/models/player/textures/material_0_diffuse.png");
+            if (diffuseTexture.id > 0) {
+                TraceLog(LOG_INFO, "Player diffuse texture loaded successfully (id: %d)", diffuseTexture.id);
+                // Apply texture to all materials
+                for (int i = 0; i < s_model.materialCount; i++) {
+                    s_model.materials[i].maps[MATERIAL_MAP_DIFFUSE].texture = diffuseTexture;
+                }
+            } else {
+                TraceLog(LOG_WARNING, "Failed to load player diffuse texture!");
+            }
             
             // Debug: Check if materials have textures
             for (int i = 0; i < s_model.materialCount; i++) {
@@ -75,6 +88,7 @@ void Player::Reset() {
     m_currentAnimIndex = -1;
     m_animTimer = 0.0f;
     m_isMoving = false;
+    m_rotationAngle = 0.0f;
 }
 
 void Player::Update(float deltaTime) {
@@ -108,33 +122,45 @@ void Player::Update(float deltaTime) {
     
     // Update animations
     if (s_modelLoaded && s_animationCount > 0) {
-        // Choose animation: 0 = idle/walk (we'll use first animation)
+        // Choose animation based on movement (0 = first animation, typically idle/walk)
         int animIndex = 0;
+        bool shouldLoop = true;  // Always loop player animations
         
-        if (animIndex != m_currentAnimIndex) {
-            m_currentAnimIndex = animIndex;
-            m_currentAnimFrame = 0;
-            m_animTimer = 0.0f;
+        // Make sure animIndex is valid
+        if (animIndex >= s_animationCount) {
+            animIndex = 0;
         }
         
-        // Update animation frame
-        if (m_currentAnimIndex >= 0 && m_currentAnimIndex < s_animationCount) {
-            m_animTimer += deltaTime;
-            float frameTime = 1.0f / 30.0f;  // Assume 30 FPS animation
-            
-            if (m_animTimer >= frameTime) {
-                m_animTimer = 0.0f;
-                m_currentAnimFrame++;
-                
-                // Loop animation
-                if (m_currentAnimFrame >= s_animations[m_currentAnimIndex].frameCount) {
-                    m_currentAnimFrame = 0;
-                }
-                
-                // Apply animation frame to model
-                UpdateModelAnimation(s_model, s_animations[m_currentAnimIndex], m_currentAnimFrame);
+        // Reset animation timer if we changed animation
+        if (m_currentAnimIndex != animIndex) {
+            m_currentAnimIndex = animIndex;
+            m_animTimer = 0.0f;
+            m_currentAnimFrame = 0;
+        }
+        
+        // Calculate animation frame based on time
+        // GLTF animations are typically exported at 60 FPS
+        float animFPS = 60.0f;
+        m_animTimer += deltaTime;
+        
+        if (shouldLoop) {
+            // Loop animation
+            float animDuration = s_animations[animIndex].frameCount / animFPS;
+            while (m_animTimer >= animDuration) {
+                m_animTimer -= animDuration;
             }
         }
+        
+        // Calculate current frame from timer
+        m_currentAnimFrame = (int)(m_animTimer * animFPS);
+        
+        // Clamp to valid frame range
+        if (m_currentAnimFrame >= s_animations[animIndex].frameCount) {
+            m_currentAnimFrame = s_animations[animIndex].frameCount - 1;
+        }
+        
+        // Update the model animation
+        UpdateModelAnimation(s_model, s_animations[animIndex], m_currentAnimFrame);
     }
 }
 
@@ -172,17 +198,36 @@ void Player::Draw() const {
     if (!m_isAlive) return;
     
     if (s_modelLoaded) {
-        // Calculate scale to match the hitbox size
-        float scale = m_size.y;  // Use height as the primary scaling factor
+        // Get model bounds to calculate proper positioning
+        BoundingBox bounds = GetModelBoundingBox(s_model);
         
-        // Draw the 3D player model
-        // Position the model at player position
-        Vector3 drawPos = m_position;
-        drawPos.y -= m_size.y / 2.0f;  // Adjust for model origin (base of model)
+        // Use a fixed uniform scale for the player model
+        float uniformScale = 10.0f;  // Adjust this value to match desired size
+        Vector3 modelScale = {uniformScale, uniformScale, uniformScale};
         
-        // Use RAYWHITE (slightly off-white) or try without tint override
-        // DrawModel uses the model's materials directly
-        DrawModel(s_model, drawPos, scale, WHITE);
+        // Adjust position to place model on ground
+        Vector3 drawPosition = m_position;
+        
+        // Calculate where the bottom of the scaled model would be relative to its center
+        float scaledModelBottom = bounds.min.y * uniformScale;
+        
+        // The model should be drawn so its bottom is at the player's position
+        // Account for arena visual thickness (y=5.0)
+        drawPosition.y = -scaledModelBottom + 5.0f;
+        
+        // Keep X and Z from m_position for horizontal placement
+        drawPosition.x = m_position.x;
+        drawPosition.z = m_position.z;
+        
+        // Draw model with rotation to face camera
+        DrawModelEx(
+            s_model,
+            drawPosition,
+            {0.0f, 1.0f, 0.0f},  // Rotate around Y axis
+            m_rotationAngle,      // Rotation angle to face camera
+            modelScale,
+            WHITE
+        );
     } else {
         // Fallback: Draw rectangular hitbox
         DrawCube(m_position, m_size.x, m_size.y, m_size.z, m_color);

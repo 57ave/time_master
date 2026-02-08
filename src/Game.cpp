@@ -269,6 +269,9 @@ void Game::UpdatePlaying() {
     // Update camera to follow player with mouse control
     m_cameraManager->UpdateThirdPerson(m_player->GetPosition(), deltaTime);
     
+    // Update player rotation to face camera
+    m_player->SetCameraAngle(m_cameraManager->GetAngleAroundPlayer());
+    
     // Update player with camera-relative movement
     Vector3 cameraForward = m_cameraManager->GetForwardDirection();
     Vector3 cameraRight = m_cameraManager->GetRightDirection();
