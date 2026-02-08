@@ -49,9 +49,13 @@ A raylib game where time is your health! Fight a boss whose HP is represented by
 - Watch the stamina bar color: green = safe, yellow = low, red = critical
 - Dash creates a cyan particle trail effect for visual feedback
 - Stay close to the boss for melee attacks, but dodge its projectiles!
+<<<<<<< HEAD
 - **The boss attacks every 3 seconds** - use the idle window to position yourself
 - **Watch out for boss AoE attacks** - they trigger at 3/4 of the attack animation
 - Watch the boss animation carefully to time your dodges for AoE attacks
+=======
+- **Watch out for boss AoE attacks** - keep your distance during ATTACK_2 and ATTACK_3!
+>>>>>>> c84064823257e97429fae742b52f04f09bea2961
 - ATTACK_2 has a 150-unit range, ATTACK_3 has a 200-unit range
 - Tomatoes spawn randomly on the ground - collect them to restore your time
 - Tomatoes disappear after 8 seconds if not collected
@@ -92,12 +96,19 @@ make clean
   - Two attack modes: melee (SPACE) and ranged projectiles (Left Click)
 - **Boss**: Animated Plant Boss (3D GLTF model) with smooth rotation and state machine
   - States: IDLE, ATTACK_1, ATTACK_2, ATTACK_3
+<<<<<<< HEAD
   - **Attacks every 3 seconds** (1.5s idle + 1.5s attack)
   - Attack patterns:
     - ATTACK_1: Shoots a projectile at the player (triggers at 0.3s)
     - ATTACK_2: Area of Effect attack (150 unit range, triggers at 3/4 of animation ~1.1s)
     - ATTACK_3: Larger Area of Effect attack (200 unit range, triggers at 3/4 of animation ~1.1s)
   - AoE attacks sync with animation for better visual feedback
+=======
+  - Attack patterns:
+    - ATTACK_1: Shoots a projectile at the player
+    - ATTACK_2: Area of Effect attack (150 unit range)
+    - ATTACK_3: Larger Area of Effect attack (200 unit range)
+>>>>>>> c84064823257e97429fae742b52f04f09bea2961
   - Smoothly rotates to face player
   - Compact hitbox (0.8x base size) matching visual scale
   - Positioned above ground level (y=5) to account for arena visual thickness

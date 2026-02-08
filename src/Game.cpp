@@ -285,10 +285,8 @@ void Game::UpdatePlaying() {
     
     // Update player with camera-relative movement
     Vector3 cameraForward = m_cameraManager->GetForwardDirection();
-<<<<<<< Updated upstream
     Vector3 cameraRight   = m_cameraManager->GetRightDirection();
 
-=======
     Vector3 cameraRight = m_cameraManager->GetRightDirection();
     
     // Handle dash input (Shift key)
@@ -321,7 +319,6 @@ void Game::UpdatePlaying() {
     m_player->Update(deltaTime);
     
     // Update player with camera-relative movement (skipped if dashing)
->>>>>>> Stashed changes
     m_player->UpdateWithCamera(deltaTime, cameraForward, cameraRight);
     
     // Update boss with player position for smooth rotation
