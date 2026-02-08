@@ -24,8 +24,8 @@ constexpr float TOMATO_RADIUS = 12.0f;
 constexpr float PROJECTILE_RADIUS = 8.0f;
 
 // Fixed camera settings
-constexpr float CAMERA_DISTANCE = 400.0f;
-constexpr float CAMERA_HEIGHT = 300.0f;
+constexpr float CAMERA_DISTANCE = 200.0f;  // Reduced for better view with smaller entities
+constexpr float CAMERA_HEIGHT = 150.0f;    // Reduced proportionally
 constexpr float CAMERA_FOV = 45.0f;
 
 /**

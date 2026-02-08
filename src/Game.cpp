@@ -305,7 +305,7 @@ void Game::UpdatePlaying() {
         for (auto& projectile : m_playerProjectiles) {
             if (!projectile->IsActive()) {
                 projectile->Launch(m_player->GetPosition(), m_boss->GetPosition());
-                m_playerAttackCooldown = 0.5f; // Half second cooldown
+                m_playerAttackCooldown = 0.2f; // Fast attack speed - 0.2 second cooldown
                 break;
             }
         }

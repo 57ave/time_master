@@ -18,8 +18,9 @@ A raylib game where time is your health! Fight a boss whose HP is represented by
 
 ### Controls
 - **Mouse**: Look around (camera control - cursor locked)
+- **Left Mouse Button**: Shoot projectiles at the boss (fast attack - 0.2s cooldown)
 - **WASD** or **Arrow Keys**: Move your character (camera-relative movement)
-- **SPACE**: Attack the boss (only works when you're close to the boss)
+- **SPACE**: Melee attack the boss (only works when you're close to the boss)
 - **ENTER**: Start game / Retry
 - **ESC**: Toggle cursor lock (unlock/lock mouse)
 - **C**: Toggle camera mode (third-person / static)
@@ -27,7 +28,8 @@ A raylib game where time is your health! Fight a boss whose HP is represented by
 - **Mouse Wheel**: Zoom in/out
 
 ### Gameplay Tips
-- Stay close to the boss to attack, but dodge its projectiles!
+- Use your fast projectile attacks to damage the boss from a distance!
+- Stay close to the boss for melee attacks, but dodge its projectiles!
 - Tomatoes spawn randomly on the ground - collect them to restore your time
 - Tomatoes disappear after 8 seconds if not collected
 - The boss shoots projectiles at you periodically
@@ -63,10 +65,14 @@ make clean
 
 ## Game Design
 - **Player**: Blue rectangular character (AABB collision) with camera-relative movement
+  - Positioned above ground level (y=5) to account for arena visual thickness
+  - Two attack modes: melee (SPACE) and ranged projectiles (Left Click)
 - **Boss**: Animated Plant Boss (3D GLTF model) with smooth rotation and state machine
   - States: IDLE, ATTACK_1, ATTACK_2, ATTACK_3
   - Smoothly rotates to face player
-  - 2.5x player size
+  - Compact hitbox (0.8x base size) matching visual scale
+  - Positioned above ground level (y=5) to account for arena visual thickness
+- **Camera**: Adjusted closer view (200 distance, 150 height) for better perspective
 - **Tomatoes**: Red circles with green stems that appear randomly
 - **Boss Projectiles**: Orange circles that track your position
 - **Collision**: 3D rectangular AABB collision system
