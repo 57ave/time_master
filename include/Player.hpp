@@ -78,6 +78,8 @@ public:
     void SetPosition(Vector3 position) { m_position = position; }
     void SetCameraAngle(float angle) { m_rotationAngle = angle; }
     void UpdateWithCamera(float deltaTime, Vector3 cameraForward, Vector3 cameraRight);
+
+    void ClampToArenaCircle();
 };
 
 } // namespace TimeMaster

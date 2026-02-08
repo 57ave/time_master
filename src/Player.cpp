@@ -1,6 +1,10 @@
 #include "Player.hpp"
 #include "raymath.h"
 #include <cstdio>
+#include <algorithm>
+
+constexpr float ARENA_RADIUS = 400.0f;
+constexpr Vector2 ARENA_CENTER = { 60.0f, 10.0f };
 
 namespace TimeMaster {
 
@@ -10,12 +14,12 @@ bool Player::s_modelLoaded = false;
 ModelAnimation* Player::s_animations = nullptr;
 int Player::s_animationCount = 0;
 
-Player::Player() 
+Player::Player()
     : m_currentAnimFrame(0)
     , m_currentAnimIndex(-1)
     , m_animTimer(0.0f)
     , m_isMoving(false)
-    , m_rotationAngle(0.0f) {
+{
     Reset();
 }
 
@@ -27,35 +31,11 @@ void Player::LoadModel() {
     if (!s_modelLoaded) {
         const char* modelPath = "assets/models/player/scene.gltf";
         s_model = ::LoadModel(modelPath);
+
         if (s_model.meshCount > 0 && s_model.meshes != nullptr) {
             s_animations = ::LoadModelAnimations(modelPath, &s_animationCount);
             s_modelLoaded = true;
-            TraceLog(LOG_INFO, "Player model loaded successfully with %d animations", s_animationCount);
-            TraceLog(LOG_INFO, "Player model has %d materials", s_model.materialCount);
-            
-            // Manually load textures for materials
-            Texture2D diffuseTexture = ::LoadTexture("assets/models/player/textures/material_0_diffuse.png");
-            if (diffuseTexture.id > 0) {
-                TraceLog(LOG_INFO, "Player diffuse texture loaded successfully (id: %d)", diffuseTexture.id);
-                // Apply texture to all materials
-                for (int i = 0; i < s_model.materialCount; i++) {
-                    s_model.materials[i].maps[MATERIAL_MAP_DIFFUSE].texture = diffuseTexture;
-                }
-            } else {
-                TraceLog(LOG_WARNING, "Failed to load player diffuse texture!");
-            }
-            
-            // Debug: Check if materials have textures
-            for (int i = 0; i < s_model.materialCount; i++) {
-                if (s_model.materials[i].maps[MATERIAL_MAP_DIFFUSE].texture.id > 0) {
-                    TraceLog(LOG_INFO, "Material %d has diffuse texture (id: %d)", i, 
-                            s_model.materials[i].maps[MATERIAL_MAP_DIFFUSE].texture.id);
-                } else {
-                    TraceLog(LOG_WARNING, "Material %d has NO diffuse texture!", i);
-                }
-            }
         } else {
-            TraceLog(LOG_WARNING, "Failed to load player model - using fallback rendering");
             s_model = (Model){0};
             s_modelLoaded = false;
         }
@@ -74,109 +54,104 @@ void Player::UnloadModel() {
 
 void Player::Reset() {
     auto& config = GameConfig::GetInstance();
-    m_size = {40.0f / 3.0f, 60.0f / 3.0f, 40.0f / 3.0f};  // Width, Height, Depth - Divided by 3 to make player smaller
+
+    m_size = {40.0f / 3.0f, 60.0f / 3.0f, 40.0f / 3.0f};
     float halfHeight = m_size.y / 2.0f;
-    m_position = {-200, halfHeight + 5.0f, 0};  // Above ground to account for arena visual thickness
-    m_velocity = {0, 0, 0};  // No initial velocity
+
+    m_position = {-200.0f, halfHeight + 5.0f, 0.0f};
+    m_velocity = {0, 0, 0};
+
     m_speed = config.playerSpeed;
     m_time = config.playerStartingTime;
     m_isAlive = true;
     m_color = BLUE;
-    
-    // Reset animation state
+
     m_currentAnimFrame = 0;
     m_currentAnimIndex = -1;
     m_animTimer = 0.0f;
     m_isMoving = false;
-    m_rotationAngle = 0.0f;
 }
 
 void Player::Update(float deltaTime) {
     Vector3 movement = {0, 0, 0};
-    
-    // Inverted controls
-    if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)) movement.z += 1;    // W = Back
-    if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)) movement.z -= 1;  // S = Forward
-    if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) movement.x += 1;  // A = Right
-    if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) movement.x -= 1; // D = Left
-    
+
+    if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP))    movement.z += 1;
+    if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN))  movement.z -= 1;
+    if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))  movement.x += 1;
+    if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) movement.x -= 1;
+
     m_isMoving = (Vector3Length(movement) > 0);
-    
+
     if (m_isMoving) {
         Move(Vector3Normalize(movement), deltaTime);
     }
-    
-    // Apply gravity
+
+    // Gravity
     m_velocity.y -= GRAVITY * deltaTime;
     m_position.y += m_velocity.y * deltaTime;
-    
-    // Check collision with arena floor
+
     float halfHeight = m_size.y / 2.0f;
-    float bottomY = m_position.y - halfHeight;
-    
-    if (bottomY <= 5.0f) {
-        // Player hit the ground (above y=0 to account for arena visual thickness)
+    if (m_position.y - halfHeight <= 5.0f) {
         m_position.y = halfHeight + 5.0f;
-        m_velocity.y = 0;  // Stop falling
+        m_velocity.y = 0;
     }
-    
-    // Update animations
+
+    // Animation
     if (s_modelLoaded && s_animationCount > 0) {
-        // Choose animation based on movement (0 = first animation, typically idle/walk)
         int animIndex = 0;
-        bool shouldLoop = true;  // Always loop player animations
-        
-        // Make sure animIndex is valid
-        if (animIndex >= s_animationCount) {
-            animIndex = 0;
-        }
-        
-        // Reset animation timer if we changed animation
-        if (m_currentAnimIndex != animIndex) {
+
+        if (animIndex != m_currentAnimIndex) {
             m_currentAnimIndex = animIndex;
-            m_animTimer = 0.0f;
             m_currentAnimFrame = 0;
+            m_animTimer = 0.0f;
         }
-        
-        // Calculate animation frame based on time
-        // GLTF animations are typically exported at 60 FPS
-        float animFPS = 60.0f;
+
         m_animTimer += deltaTime;
-        
-        if (shouldLoop) {
-            // Loop animation
-            float animDuration = s_animations[animIndex].frameCount / animFPS;
-            while (m_animTimer >= animDuration) {
-                m_animTimer -= animDuration;
+        if (m_animTimer >= (1.0f / 30.0f)) {
+            m_animTimer = 0.0f;
+            m_currentAnimFrame++;
+
+            if (m_currentAnimFrame >= s_animations[m_currentAnimIndex].frameCount) {
+                m_currentAnimFrame = 0;
             }
+
+            UpdateModelAnimation(
+                s_model,
+                s_animations[m_currentAnimIndex],
+                m_currentAnimFrame
+            );
         }
-        
-        // Calculate current frame from timer
-        m_currentAnimFrame = (int)(m_animTimer * animFPS);
-        
-        // Clamp to valid frame range
-        if (m_currentAnimFrame >= s_animations[animIndex].frameCount) {
-            m_currentAnimFrame = s_animations[animIndex].frameCount - 1;
-        }
-        
-        // Update the model animation
-        UpdateModelAnimation(s_model, s_animations[animIndex], m_currentAnimFrame);
     }
 }
 
 void Player::Move(Vector3 direction, float deltaTime) {
-    // Only move on horizontal plane (X and Z)
     m_position.x += direction.x * m_speed * deltaTime;
     m_position.z += direction.z * m_speed * deltaTime;
-    
-    // Keep player in bounds (consider half-width)
-    float halfWidth = m_size.x / 2.0f;
-    float halfDepth = m_size.z / 2.0f;
-    
-    m_position.x = Clamp(m_position.x, -ARENA_SIZE + halfWidth, ARENA_SIZE - halfWidth);
-    m_position.z = Clamp(m_position.z, -ARENA_SIZE + halfDepth, ARENA_SIZE - halfDepth);
-    // Y position is now controlled by gravity in Update()
+
+    ClampToArenaCircle();
 }
+
+void Player::ClampToArenaCircle()
+{
+    float playerRadius = std::max(m_size.x, m_size.z) * 0.5f;
+    float maxRadius = ARENA_RADIUS - playerRadius;
+
+    Vector2 pos2D = {
+        m_position.x - ARENA_CENTER.x,
+        m_position.z - ARENA_CENTER.y
+    };
+
+    float distance = Vector2Length(pos2D);
+
+    if (distance > maxRadius) {
+        Vector2 dir = Vector2Normalize(pos2D);
+        Vector2 clamped = Vector2Scale(dir, maxRadius);
+
+        m_position.x = clamped.x + ARENA_CENTER.x;
+        m_position.z = clamped.y + ARENA_CENTER.y;
+    }
+}
+
 
 AABB Player::GetAABB() const {
     Vector3 halfExtents = Vector3Scale(m_size, 0.5f);
@@ -185,57 +160,23 @@ AABB Player::GetAABB() const {
 
 void Player::ApplyPushback(Vector3 pushback) {
     m_position = Vector3Add(m_position, pushback);
-    
-    // Keep in bounds after pushback
-    float halfWidth = m_size.x / 2.0f;
-    float halfDepth = m_size.z / 2.0f;
-    
-    m_position.x = Clamp(m_position.x, -ARENA_SIZE + halfWidth, ARENA_SIZE - halfWidth);
-    m_position.z = Clamp(m_position.z, -ARENA_SIZE + halfDepth, ARENA_SIZE - halfDepth);
+    ClampToArenaCircle();
 }
 
 void Player::Draw() const {
     if (!m_isAlive) return;
-    
+
     if (s_modelLoaded) {
-        // Get model bounds to calculate proper positioning
-        BoundingBox bounds = GetModelBoundingBox(s_model);
-        
-        // Use a fixed uniform scale for the player model
-        float uniformScale = 10.0f;  // Adjust this value to match desired size
-        Vector3 modelScale = {uniformScale, uniformScale, uniformScale};
-        
-        // Adjust position to place model on ground
-        Vector3 drawPosition = m_position;
-        
-        // Calculate where the bottom of the scaled model would be relative to its center
-        float scaledModelBottom = bounds.min.y * uniformScale;
-        
-        // The model should be drawn so its bottom is at the player's position
-        // Account for arena visual thickness (y=5.0)
-        drawPosition.y = -scaledModelBottom + 5.0f;
-        
-        // Keep X and Z from m_position for horizontal placement
-        drawPosition.x = m_position.x;
-        drawPosition.z = m_position.z;
-        
-        // Draw model with rotation to face camera
-        DrawModelEx(
-            s_model,
-            drawPosition,
-            {0.0f, 1.0f, 0.0f},  // Rotate around Y axis
-            m_rotationAngle,      // Rotation angle to face camera
-            modelScale,
-            WHITE
-        );
+        float scale = m_size.y;
+
+        Vector3 drawPos = m_position;
+        drawPos.y -= m_size.y / 2.0f;
+
+        DrawModel(s_model, drawPos, scale, WHITE);
     } else {
-        // Fallback: Draw rectangular hitbox
         DrawCube(m_position, m_size.x, m_size.y, m_size.z, m_color);
         DrawCubeWires(m_position, m_size.x, m_size.y, m_size.z, DARKBLUE);
     }
-    
-    // Optional: Draw AABB debug
-    // GetAABB().DrawDebug(GREEN);
 }
 
 void Player::TakeDamage(float damage) {
@@ -248,10 +189,7 @@ void Player::TakeDamage(float damage) {
 
 void Player::Heal(float amount) {
     auto& config = GameConfig::GetInstance();
-    m_time += amount;
-    if (m_time > config.playerMaxTime) {
-        m_time = config.playerMaxTime;
-    }
+    m_time = std::min(m_time + amount, config.playerMaxTime);
 }
 
 std::string Player::GetTimeString() const {
@@ -262,33 +200,29 @@ std::string Player::GetTimeString() const {
     return std::string(buffer);
 }
 
-void Player::UpdateWithCamera(float deltaTime, Vector3 cameraForward, Vector3 cameraRight) {
+void Player::UpdateWithCamera(float deltaTime, Vector3 cameraForward, Vector3 cameraRight)
+{
     Vector3 movement = {0, 0, 0};
-    
-    // Get input
-    bool moveForward = IsKeyDown(KEY_W) || IsKeyDown(KEY_UP);
-    bool moveBackward = IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN);
-    bool moveLeft = IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT);
-    bool moveRight = IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT);
-    
-    // Build movement vector relative to camera
-    if (moveForward) {
+
+    // On ignore la composante verticale de la caméra
+    cameraForward.y = 0.0f;
+    cameraRight.y   = 0.0f;
+
+    cameraForward = Vector3Normalize(cameraForward);
+    cameraRight   = Vector3Normalize(cameraRight);
+
+    if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP))
         movement = Vector3Add(movement, cameraForward);
-    }
-    if (moveBackward) {
+    if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN))
         movement = Vector3Subtract(movement, cameraForward);
-    }
-    if (moveLeft) {
+    if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))
         movement = Vector3Subtract(movement, cameraRight);
-    }
-    if (moveRight) {
+    if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT))
         movement = Vector3Add(movement, cameraRight);
-    }
-    
-    // Apply movement if any input detected
-    if (Vector3Length(movement) > 0) {
+
+    if (Vector3Length(movement) > 0.0f)
         Move(Vector3Normalize(movement), deltaTime);
-    }
 }
+
 
 } // namespace TimeMaster
