@@ -25,7 +25,7 @@ Player::~Player() {
 
 void Player::LoadModel() {
     if (!s_modelLoaded) {
-        const char* modelPath = "assets/models/player/scene.gltf";
+        const char* modelPath = "assets/models/player/source/model.gltf";
         s_model = ::LoadModel(modelPath);
         if (s_model.meshCount > 0 && s_model.meshes != nullptr) {
             s_animations = ::LoadModelAnimations(modelPath, &s_animationCount);
@@ -33,23 +33,14 @@ void Player::LoadModel() {
             TraceLog(LOG_INFO, "Player model loaded successfully with %d animations", s_animationCount);
             TraceLog(LOG_INFO, "Player model has %d materials", s_model.materialCount);
             
-            // Manually load textures for materials
-            Texture2D diffuseTexture = ::LoadTexture("assets/models/player/textures/material_0_diffuse.png");
-            if (diffuseTexture.id > 0) {
-                TraceLog(LOG_INFO, "Player diffuse texture loaded successfully (id: %d)", diffuseTexture.id);
-                // Apply texture to all materials
-                for (int i = 0; i < s_model.materialCount; i++) {
-                    s_model.materials[i].maps[MATERIAL_MAP_DIFFUSE].texture = diffuseTexture;
-                }
-            } else {
-                TraceLog(LOG_WARNING, "Failed to load player diffuse texture!");
-            }
-            
-            // Debug: Check if materials have textures
+            // The GLTF has embedded texture data, but we need to set the texture filter
+            // Debug: Check if materials have textures loaded from GLTF
             for (int i = 0; i < s_model.materialCount; i++) {
                 if (s_model.materials[i].maps[MATERIAL_MAP_DIFFUSE].texture.id > 0) {
                     TraceLog(LOG_INFO, "Material %d has diffuse texture (id: %d)", i, 
                             s_model.materials[i].maps[MATERIAL_MAP_DIFFUSE].texture.id);
+                    // Set texture filter for pixel-art style
+                    SetTextureFilter(s_model.materials[i].maps[MATERIAL_MAP_DIFFUSE].texture, TEXTURE_FILTER_BILINEAR);
                 } else {
                     TraceLog(LOG_WARNING, "Material %d has NO diffuse texture!", i);
                 }
@@ -220,11 +211,12 @@ void Player::Draw() const {
         drawPosition.z = m_position.z;
         
         // Draw model with rotation to face camera
+        // Add 180 degrees to flip the model to face the correct direction
         DrawModelEx(
             s_model,
             drawPosition,
             {0.0f, 1.0f, 0.0f},  // Rotate around Y axis
-            m_rotationAngle,      // Rotation angle to face camera
+            m_rotationAngle + 180.0f,      // Rotation angle to face camera (flipped)
             modelScale,
             WHITE
         );
