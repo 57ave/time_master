@@ -22,6 +22,8 @@ private:
     // Mouse control
     float m_mouseSensitivity;
     bool m_cursorLocked;
+
+    void ClampCameraToArena();
     
 public:
     CameraManager();

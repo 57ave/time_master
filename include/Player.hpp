@@ -21,6 +21,7 @@ private:
     int m_currentAnimIndex;
     float m_animTimer;
     bool m_isMoving;
+    bool m_isRunning;       // Running state (shift key)
     float m_rotationAngle;  // Rotation angle to face camera
     
     // Static model (shared by all players, though typically only one exists)

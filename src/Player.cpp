@@ -2,6 +2,7 @@
 #include "raymath.h"
 #include <cstdio>
 #include <algorithm>
+#include <cstring>
 
 constexpr float ARENA_RADIUS = 400.0f;
 constexpr Vector2 ARENA_CENTER = { 60.0f, 10.0f };
@@ -19,6 +20,8 @@ Player::Player()
     , m_currentAnimIndex(-1)
     , m_animTimer(0.0f)
     , m_isMoving(false)
+    , m_isRunning(false)
+    , m_rotationAngle(0.0f)
 {
     Reset();
 }
@@ -35,6 +38,22 @@ void Player::LoadModel() {
         if (s_model.meshCount > 0 && s_model.meshes != nullptr) {
             s_animations = ::LoadModelAnimations(modelPath, &s_animationCount);
             s_modelLoaded = true;
+
+            TraceLog(LOG_INFO, "Player model loaded with %d animations", s_animationCount);
+
+            for (int i = 0; i < s_animationCount; i++) {
+                TraceLog(LOG_INFO, "  Animation %d: %s (%d frames)",
+                         i, s_animations[i].name, s_animations[i].frameCount);
+            }
+
+            for (int i = 0; i < s_model.materialCount; i++) {
+                if (s_model.materials[i].maps[MATERIAL_MAP_DIFFUSE].texture.id > 0) {
+                    SetTextureFilter(
+                        s_model.materials[i].maps[MATERIAL_MAP_DIFFUSE].texture,
+                        TEXTURE_FILTER_BILINEAR
+                    );
+                }
+            }
         } else {
             s_model = (Model){0};
             s_modelLoaded = false;
@@ -70,6 +89,8 @@ void Player::Reset() {
     m_currentAnimIndex = -1;
     m_animTimer = 0.0f;
     m_isMoving = false;
+    m_isRunning = false;
+    m_rotationAngle = 0.0f;
 }
 
 void Player::Update(float deltaTime) {
@@ -84,6 +105,7 @@ void Player::Update(float deltaTime) {
 
     if (m_isMoving) {
         Move(Vector3Normalize(movement), deltaTime);
+        m_rotationAngle = atan2f(movement.x, movement.z) * RAD2DEG;
     }
 
     // Gravity
@@ -98,7 +120,27 @@ void Player::Update(float deltaTime) {
 
     // Animation
     if (s_modelLoaded && s_animationCount > 0) {
-        int animIndex = 0;
+        static int idleAnim = -1;
+        static int walkAnim = -1;
+        static int runAnim  = -1;
+
+        if (idleAnim == -1) {
+            for (int i = 0; i < s_animationCount; i++) {
+                const char* name = s_animations[i].name;
+                if (strstr(name, "Idle") || strstr(name, "idle")) idleAnim = i;
+                if (strstr(name, "Walk") || strstr(name, "walk")) walkAnim = i;
+                if (strstr(name, "Run")  || strstr(name, "run"))  runAnim  = i;
+            }
+        }
+
+        int animIndex = (idleAnim >= 0) ? idleAnim : 0;
+
+        if (m_isMoving) {
+            if (m_isRunning && runAnim >= 0) animIndex = runAnim;
+            else if (walkAnim >= 0) animIndex = walkAnim;
+        }
+
+        if (animIndex >= s_animationCount) animIndex = 0;
 
         if (animIndex != m_currentAnimIndex) {
             m_currentAnimIndex = animIndex;
@@ -127,12 +169,10 @@ void Player::Update(float deltaTime) {
 void Player::Move(Vector3 direction, float deltaTime) {
     m_position.x += direction.x * m_speed * deltaTime;
     m_position.z += direction.z * m_speed * deltaTime;
-
     ClampToArenaCircle();
 }
 
-void Player::ClampToArenaCircle()
-{
+void Player::ClampToArenaCircle() {
     float playerRadius = std::max(m_size.x, m_size.z) * 0.5f;
     float maxRadius = ARENA_RADIUS - playerRadius;
 
@@ -152,7 +192,6 @@ void Player::ClampToArenaCircle()
     }
 }
 
-
 AABB Player::GetAABB() const {
     Vector3 halfExtents = Vector3Scale(m_size, 0.5f);
     return AABB::FromCenter(m_position, halfExtents);
@@ -167,12 +206,22 @@ void Player::Draw() const {
     if (!m_isAlive) return;
 
     if (s_modelLoaded) {
-        float scale = m_size.y;
+        BoundingBox bounds = GetModelBoundingBox(s_model);
+
+        float scale = 10.0f;
+        Vector3 modelScale = {scale, scale, scale};
 
         Vector3 drawPos = m_position;
-        drawPos.y -= m_size.y / 2.0f;
+        drawPos.y = -bounds.min.y * scale + 5.0f;
 
-        DrawModel(s_model, drawPos, scale, WHITE);
+        DrawModelEx(
+            s_model,
+            drawPos,
+            {0.0f, 1.0f, 0.0f},
+            m_rotationAngle + 180.0f,
+            modelScale,
+            WHITE
+        );
     } else {
         DrawCube(m_position, m_size.x, m_size.y, m_size.z, m_color);
         DrawCubeWires(m_position, m_size.x, m_size.y, m_size.z, DARKBLUE);
@@ -204,25 +253,33 @@ void Player::UpdateWithCamera(float deltaTime, Vector3 cameraForward, Vector3 ca
 {
     Vector3 movement = {0, 0, 0};
 
-    // On ignore la composante verticale de la caméra
     cameraForward.y = 0.0f;
     cameraRight.y   = 0.0f;
 
     cameraForward = Vector3Normalize(cameraForward);
     cameraRight   = Vector3Normalize(cameraRight);
 
-    if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP))
-        movement = Vector3Add(movement, cameraForward);
-    if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN))
-        movement = Vector3Subtract(movement, cameraForward);
-    if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))
-        movement = Vector3Subtract(movement, cameraRight);
-    if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT))
-        movement = Vector3Add(movement, cameraRight);
+    bool forward  = IsKeyDown(KEY_W) || IsKeyDown(KEY_UP);
+    bool backward = IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN);
+    bool left     = IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT);
+    bool right    = IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT);
 
-    if (Vector3Length(movement) > 0.0f)
+    m_isRunning = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
+
+    if (forward)  movement = Vector3Add(movement, cameraForward);
+    if (backward) movement = Vector3Subtract(movement, cameraForward);
+    if (left)     movement = Vector3Subtract(movement, cameraRight);
+    if (right)    movement = Vector3Add(movement, cameraRight);
+
+    if (Vector3Length(movement) > 0.0f) {
+        float originalSpeed = m_speed;
+        m_speed = m_isRunning ? m_speed * 1.8f : m_speed;
+
         Move(Vector3Normalize(movement), deltaTime);
-}
 
+        m_speed = originalSpeed;
+        m_rotationAngle = atan2f(movement.x, movement.z) * RAD2DEG;
+    }
+}
 
 } // namespace TimeMaster

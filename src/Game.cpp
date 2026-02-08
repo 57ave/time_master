@@ -274,7 +274,8 @@ void Game::UpdatePlaying() {
     
     // Update player with camera-relative movement
     Vector3 cameraForward = m_cameraManager->GetForwardDirection();
-    Vector3 cameraRight = m_cameraManager->GetRightDirection();
+    Vector3 cameraRight   = m_cameraManager->GetRightDirection();
+
     m_player->UpdateWithCamera(deltaTime, cameraForward, cameraRight);
     
     // Update boss with player position for smooth rotation
