@@ -8,6 +8,7 @@
 #include "CameraManager.hpp"
 #include "HUD.hpp"
 #include "Collision.hpp"
+#include "Particle.hpp"
 #include <vector>
 #include <memory>
 
@@ -31,6 +32,7 @@ private:
     // Systems
     std::unique_ptr<CameraManager> m_cameraManager;
     std::unique_ptr<HUD> m_hud;
+    std::unique_ptr<ParticleSystem> m_particleSystem;
     
     // Arena model
     Model m_arenaModel;
@@ -39,6 +41,13 @@ private:
     // Spawn timers
     float m_tomatoSpawnTimer;
     float m_playerAttackCooldown;
+    
+    // Movement tracking for footstep particles
+    Vector3 m_lastPlayerPosition;
+    Vector3 m_lastBossPosition;
+    float m_playerFootstepTimer;
+    float m_bossFootstepTimer;
+    float m_dashParticleTimer;  // Timer for dash particle emission
     
     // Settings menu state
     int m_selectedSetting;

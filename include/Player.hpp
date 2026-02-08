@@ -24,6 +24,13 @@ private:
     bool m_isRunning;       // Running state (shift key)
     float m_rotationAngle;  // Rotation angle to face camera
     
+    // Dash state
+    bool m_isDashing;
+    float m_dashTimer;
+    float m_dashCooldownTimer;
+    Vector3 m_dashDirection;
+    float m_stamina;  // Stamina for dashing
+    
     // Static model (shared by all players, though typically only one exists)
     static Model s_model;
     static bool s_modelLoaded;
@@ -79,8 +86,17 @@ public:
     void SetPosition(Vector3 position) { m_position = position; }
     void SetCameraAngle(float angle) { m_rotationAngle = angle; }
     void UpdateWithCamera(float deltaTime, Vector3 cameraForward, Vector3 cameraRight);
+<<<<<<< Updated upstream
 
     void ClampToArenaCircle();
+=======
+    
+    // Dash
+    void StartDash(Vector3 direction);
+    bool IsDashing() const { return m_isDashing; }
+    bool CanDash() const { return !m_isDashing && m_dashCooldownTimer <= 0.0f; }
+    float GetStamina() const { return m_stamina; }
+>>>>>>> Stashed changes
 };
 
 } // namespace TimeMaster

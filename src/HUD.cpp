@@ -39,12 +39,20 @@ void HUD::Draw(const Player& player, const Boss& boss) {
     auto& config = GameConfig::GetInstance();
     DrawTimeBar(300, 30, player.GetTime(), config.playerMaxTime, SKYBLUE);
     
+    // Draw stamina bar below time bar
+    DrawTextWithFont("STAMINA:", 300, 55, 16, DARKGREEN);
+    float staminaPercent = player.GetStamina() / MAX_STAMINA;
+    Color staminaColor = staminaPercent > 0.5f ? GREEN : (staminaPercent > 0.25f ? YELLOW : RED);
+    DrawRectangle(380, 55, 200, 15, DARKGRAY);
+    DrawRectangle(380, 55, (int)(200 * staminaPercent), 15, staminaColor);
+    DrawRectangleLines(380, 55, 200, 15, BLACK);
+    
     // Draw boss health as a clock instead of a bar
     DrawTextWithFont("BOSS HP:", SCREEN_WIDTH - 200, 15, 25, RED);
     DrawClockDisplay(SCREEN_WIDTH - 95, 45, boss.GetTime(), config.bossStartingTime, 28);
     
     // Draw controls hint
-    DrawTextWithFont("WASD: Move | LMB: Shoot | SPACE: Melee", 10, SCREEN_HEIGHT - 25, 18, DARKGRAY);
+    DrawTextWithFont("WASD: Move | LMB: Shoot | SPACE: Melee | SHIFT: Dash", 10, SCREEN_HEIGHT - 25, 18, DARKGRAY);
 }
 
 void HUD::DrawMenu() {
@@ -54,8 +62,9 @@ void HUD::DrawMenu() {
     DrawTextWithFont("WASD / Arrow Keys - Move", SCREEN_WIDTH / 2 - 250, 400, 20, BLACK);
     DrawTextWithFont("Left Mouse Button - Shoot Projectile", SCREEN_WIDTH / 2 - 250, 430, 20, BLACK);
     DrawTextWithFont("SPACE - Melee Attack (when close)", SCREEN_WIDTH / 2 - 250, 460, 20, BLACK);
-    DrawTextWithFont("Collect tomatoes to restore your time!", SCREEN_WIDTH / 2 - 250, 500, 20, RED);
-    DrawTextWithFont("Time decreases automatically!", SCREEN_WIDTH / 2 - 250, 530, 20, ORANGE);
+    DrawTextWithFont("SHIFT - Dash (uses stamina)", SCREEN_WIDTH / 2 - 250, 490, 20, BLACK);
+    DrawTextWithFont("Collect tomatoes to restore your time!", SCREEN_WIDTH / 2 - 250, 530, 20, RED);
+    DrawTextWithFont("Time decreases automatically!", SCREEN_WIDTH / 2 - 250, 560, 20, ORANGE);
     DrawTextWithFont("Press ENTER to Start", SCREEN_WIDTH / 2 - 150, 600, 25, GREEN);
     DrawTextWithFont("Press S for Settings", SCREEN_WIDTH / 2 - 140, 640, 20, BLUE);
 }

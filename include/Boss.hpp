@@ -84,8 +84,9 @@ public:
     // State management
     void SetState(BossState newState);
     BossState GetState() const { return m_currentState; }
-    bool ShouldTriggerAttack() const { return !m_hasAttackedInState; }
+    bool ShouldTriggerAttack() const;
     void MarkAttackTriggered() { m_hasAttackedInState = true; }
+    float GetStateTimer() const { return m_stateTimer; }
     
     // Collision
     AABB GetAABB() const;

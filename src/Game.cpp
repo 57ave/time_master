@@ -12,6 +12,11 @@ Game::Game()
     , m_arenaModelLoaded(false)
     , m_tomatoSpawnTimer(0.0f)
     , m_playerAttackCooldown(0.0f)
+    , m_lastPlayerPosition({0, 0, 0})
+    , m_lastBossPosition({0, 0, 0})
+    , m_playerFootstepTimer(0.0f)
+    , m_bossFootstepTimer(0.0f)
+    , m_dashParticleTimer(0.0f)
     , m_selectedSetting(0) {
     
     srand(static_cast<unsigned int>(time(nullptr)));
@@ -34,6 +39,7 @@ Game::Game()
     // Initialize systems
     m_cameraManager = std::make_unique<CameraManager>();
     m_hud = std::make_unique<HUD>();
+    m_particleSystem = std::make_unique<ParticleSystem>();
     
     // Initialize entities
     m_player = std::make_unique<Player>();
@@ -73,8 +79,13 @@ void Game::Init() {
     m_player->Reset();
     m_boss->Reset();
     m_cameraManager->Reset();
+    m_particleSystem->Clear();
     m_tomatoSpawnTimer = 0.0f;
     m_playerAttackCooldown = 0.0f;
+    m_lastPlayerPosition = m_player->GetPosition();
+    m_lastBossPosition = m_boss->GetPosition();
+    m_playerFootstepTimer = 0.0f;
+    m_bossFootstepTimer = 0.0f;
     
     // Ensure cursor is locked for gameplay
     DisableCursor();
@@ -274,12 +285,76 @@ void Game::UpdatePlaying() {
     
     // Update player with camera-relative movement
     Vector3 cameraForward = m_cameraManager->GetForwardDirection();
+<<<<<<< Updated upstream
     Vector3 cameraRight   = m_cameraManager->GetRightDirection();
 
+=======
+    Vector3 cameraRight = m_cameraManager->GetRightDirection();
+    
+    // Handle dash input (Shift key)
+    if (IsKeyPressed(KEY_LEFT_SHIFT) || IsKeyPressed(KEY_RIGHT_SHIFT)) {
+        // Get current movement direction
+        Vector3 dashDirection = {0, 0, 0};
+        
+        if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)) {
+            dashDirection = Vector3Add(dashDirection, cameraForward);
+        }
+        if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)) {
+            dashDirection = Vector3Subtract(dashDirection, cameraForward);
+        }
+        if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) {
+            dashDirection = Vector3Subtract(dashDirection, cameraRight);
+        }
+        if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) {
+            dashDirection = Vector3Add(dashDirection, cameraRight);
+        }
+        
+        // If no direction input, dash in the direction player is facing
+        if (Vector3Length(dashDirection) == 0) {
+            dashDirection = cameraForward;
+        }
+        
+        m_player->StartDash(dashDirection);
+    }
+    
+    // Update player (handles dash movement, timers, gravity)
+    m_player->Update(deltaTime);
+    
+    // Update player with camera-relative movement (skipped if dashing)
+>>>>>>> Stashed changes
     m_player->UpdateWithCamera(deltaTime, cameraForward, cameraRight);
     
     // Update boss with player position for smooth rotation
     m_boss->UpdateWithPlayer(m_player->GetPosition(), deltaTime);
+    
+    // Update particle system
+    m_particleSystem->Update(deltaTime);
+    
+    // Emit particles based on player state
+    Vector3 playerPos = m_player->GetPosition();
+    
+    if (m_player->IsDashing()) {
+        // Emit dash particles periodically (not every frame)
+        m_dashParticleTimer += deltaTime;
+        if (m_dashParticleTimer >= 0.02f) { // Emit every 0.02 seconds during dash
+            m_particleSystem->EmitDash(playerPos, Vector3Normalize({cameraForward.x, 0, cameraForward.z}));
+            m_dashParticleTimer = 0.0f;
+        }
+    } else {
+        // Reset dash particle timer when not dashing
+        m_dashParticleTimer = 0.0f;
+        
+        // Emit footstep particles when walking (not dashing)
+        float playerDist = Vector3Distance(playerPos, m_lastPlayerPosition);
+        if (playerDist > 0.1f) { // Player is moving
+            m_playerFootstepTimer += deltaTime;
+            if (m_playerFootstepTimer >= 0.3f) { // Emit footstep every 0.3 seconds
+                m_particleSystem->EmitFootstep(playerPos);
+                m_playerFootstepTimer = 0.0f;
+            }
+        }
+    }
+    m_lastPlayerPosition = playerPos;
     
     // Update player attack cooldown
     m_playerAttackCooldown -= deltaTime;
@@ -310,8 +385,15 @@ void Game::UpdatePlaying() {
         // Shoot projectile toward boss
         for (auto& projectile : m_playerProjectiles) {
             if (!projectile->IsActive()) {
-                projectile->Launch(m_player->GetPosition(), m_boss->GetPosition());
-                m_playerAttackCooldown = 0.2f; // Fast attack speed - 0.2 second cooldown
+                Vector3 playerPos = m_player->GetPosition();
+                Vector3 bossPos = m_boss->GetPosition();
+                Vector3 shootDirection = Vector3Normalize(Vector3Subtract(bossPos, playerPos));
+                
+                projectile->Launch(playerPos, bossPos);
+                m_playerAttackCooldown = 1.0f; // Increased cooldown - 1.0 second between shots
+                
+                // Emit shooting particles
+                m_particleSystem->EmitPlayerShoot(playerPos, shootDirection);
                 break;
             }
         }
@@ -443,6 +525,9 @@ void Game::DrawPlaying() {
         projectile->Draw();
     }
     
+    // Draw particle system
+    m_particleSystem->Draw();
+    
     EndMode3D();
     
     // Draw HUD
@@ -476,6 +561,12 @@ void Game::HandlePlayerAttack() {
     auto& config = GameConfig::GetInstance();
     if (m_boss->CheckCollisionWithPlayer(*m_player)) {
         m_boss->TakeDamage(config.bossDamagePerHit);
+        
+        // Emit melee attack particles
+        Vector3 playerPos = m_player->GetPosition();
+        Vector3 bossPos = m_boss->GetPosition();
+        Vector3 attackDirection = Vector3Normalize(Vector3Subtract(bossPos, playerPos));
+        m_particleSystem->EmitMeleeAttack(playerPos, attackDirection);
     }
 }
 
@@ -501,6 +592,9 @@ void Game::HandleBossAttack(BossState attackType) {
                 float distance = Vector3Distance(bossPos, playerPos);
                 float aoeRange = 150.0f; // AoE range
                 
+                // Emit particle effect for AoE attack
+                m_particleSystem->EmitBossAoE(bossPos, aoeRange);
+                
                 if (distance <= aoeRange && m_player->IsAlive()) {
                     m_player->TakeDamage(config.playerDamagePerHit);
                     printf("Boss ATTACK_2: AoE hit! Distance: %.2f\n", distance);
@@ -515,6 +609,9 @@ void Game::HandleBossAttack(BossState attackType) {
                 Vector3 playerPos = m_player->GetPosition();
                 float distance = Vector3Distance(bossPos, playerPos);
                 float aoeRange = 200.0f; // Larger AoE range
+                
+                // Emit particle effect for larger AoE attack
+                m_particleSystem->EmitBossAoE(bossPos, aoeRange);
                 
                 if (distance <= aoeRange && m_player->IsAlive()) {
                     m_player->TakeDamage(config.playerDamagePerHit);

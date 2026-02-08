@@ -220,8 +220,8 @@ void Boss::UpdateState(float deltaTime) {
     
     switch (m_currentState) {
         case BossState::IDLE:
-            // Idle/standby animation - wait 5 seconds before attacking
-            if (m_stateTimer > 5.0f) {
+            // Idle/standby animation - wait 1.5 seconds before attacking (total cycle: 3s)
+            if (m_stateTimer > 1.5f) {
                 // Randomly choose an attack
                 int attack = GetRandomValue(1, 3);
                 if (attack == 1) {
@@ -367,7 +367,16 @@ void Boss::ApplyPushback(Vector3 pushback) {
 }
 
 bool Boss::CheckCollisionWithPlayer(const Player& player) const {
-    return GetAABB().Intersects(player.GetAABB());
+    // Add extra range for melee attack (30 units)
+    constexpr float MELEE_ATTACK_RANGE = 30.0f;
+    
+    // Get distance between player and boss
+    float distance = Vector3Distance(m_position, player.GetPosition());
+    
+    // Check if within melee range (using radius-based check with extra range)
+    float maxDistance = (m_size.x / 2.0f) + PLAYER_RADIUS + MELEE_ATTACK_RANGE;
+    
+    return distance <= maxDistance;
 }
 
 std::string Boss::GetTimeString() const {
@@ -378,6 +387,7 @@ std::string Boss::GetTimeString() const {
     return std::string(buffer);
 }
 
+<<<<<<< Updated upstream
 void Boss::MoveTowards(const Vector3& target, float deltaTime) {
     Vector3 direction = Vector3Subtract(target, m_position);
     direction.y = 0; // on ne change pas la hauteur
@@ -392,6 +402,27 @@ void Boss::MoveTowards(const Vector3& target, float deltaTime) {
         }
 
         ApplyPushback(moveDir);
+=======
+bool Boss::ShouldTriggerAttack() const {
+    // Don't trigger if already attacked
+    if (m_hasAttackedInState) {
+        return false;
+    }
+    
+    // Different timing for different attacks
+    switch (m_currentState) {
+        case BossState::ATTACK_1:
+            // Projectile attack triggers early (at 0.3s of 1.5s animation = 20%)
+            return m_stateTimer >= 0.3f;
+            
+        case BossState::ATTACK_2:
+        case BossState::ATTACK_3:
+            // AoE attacks trigger at 3/4 of animation (at 1.125s of 1.5s)
+            return m_stateTimer >= 1.125f;
+            
+        default:
+            return false;
+>>>>>>> Stashed changes
     }
 }
 

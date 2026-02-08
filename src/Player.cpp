@@ -20,9 +20,18 @@ Player::Player()
     , m_currentAnimIndex(-1)
     , m_animTimer(0.0f)
     , m_isMoving(false)
+<<<<<<< Updated upstream
     , m_isRunning(false)
     , m_rotationAngle(0.0f)
 {
+=======
+    , m_rotationAngle(0.0f)
+    , m_isDashing(false)
+    , m_dashTimer(0.0f)
+    , m_dashCooldownTimer(0.0f)
+    , m_dashDirection({0, 0, 0})
+    , m_stamina(MAX_STAMINA) {
+>>>>>>> Stashed changes
     Reset();
 }
 
@@ -91,9 +100,42 @@ void Player::Reset() {
     m_isMoving = false;
     m_isRunning = false;
     m_rotationAngle = 0.0f;
+    
+    // Reset dash state
+    m_isDashing = false;
+    m_dashTimer = 0.0f;
+    m_dashCooldownTimer = 0.0f;
+    m_dashDirection = {0, 0, 0};
+    m_stamina = MAX_STAMINA;
 }
 
 void Player::Update(float deltaTime) {
+    // Update dash timers
+    if (m_isDashing) {
+        m_dashTimer -= deltaTime;
+        if (m_dashTimer <= 0.0f) {
+            m_isDashing = false;
+            m_dashTimer = 0.0f;  // Ensure timer is exactly 0
+            m_dashCooldownTimer = DASH_COOLDOWN;
+            m_dashDirection = {0, 0, 0};  // Clear dash direction
+        }
+    }
+    
+    if (m_dashCooldownTimer > 0.0f) {
+        m_dashCooldownTimer -= deltaTime;
+        if (m_dashCooldownTimer < 0.0f) {
+            m_dashCooldownTimer = 0.0f;  // Ensure it doesn't go negative
+        }
+    }
+    
+    // Regenerate stamina when not dashing
+    if (!m_isDashing && m_stamina < MAX_STAMINA) {
+        m_stamina += STAMINA_REGEN_RATE * deltaTime;
+        if (m_stamina > MAX_STAMINA) {
+            m_stamina = MAX_STAMINA;
+        }
+    }
+    
     Vector3 movement = {0, 0, 0};
 
     if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP))    movement.z += 1;
@@ -102,8 +144,23 @@ void Player::Update(float deltaTime) {
     if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) movement.x -= 1;
 
     m_isMoving = (Vector3Length(movement) > 0);
+<<<<<<< Updated upstream
 
     if (m_isMoving) {
+=======
+    
+    // Handle dash movement separately
+    if (m_isDashing) {
+        // Move in dash direction with flat speed boost
+        float dashSpeed = m_speed + DASH_SPEED_BOOST;
+        Vector3 dashMovement = Vector3Scale(m_dashDirection, dashSpeed * deltaTime);
+        m_position = Vector3Add(m_position, dashMovement);
+        
+        // Debug output
+        TraceLog(LOG_INFO, "DASH: speed=%f, boost=%f, total=%f, timer=%f", 
+                 m_speed, DASH_SPEED_BOOST, dashSpeed, m_dashTimer);
+    } else if (m_isMoving) {
+>>>>>>> Stashed changes
         Move(Vector3Normalize(movement), deltaTime);
         m_rotationAngle = atan2f(movement.x, movement.z) * RAD2DEG;
     }
@@ -249,8 +306,17 @@ std::string Player::GetTimeString() const {
     return std::string(buffer);
 }
 
+<<<<<<< Updated upstream
 void Player::UpdateWithCamera(float deltaTime, Vector3 cameraForward, Vector3 cameraRight)
 {
+=======
+void Player::UpdateWithCamera(float deltaTime, Vector3 cameraForward, Vector3 cameraRight) {
+    // Don't process normal movement if dashing
+    if (m_isDashing) {
+        return;  // Dash movement is handled in Update()
+    }
+    
+>>>>>>> Stashed changes
     Vector3 movement = {0, 0, 0};
 
     cameraForward.y = 0.0f;
@@ -279,6 +345,32 @@ void Player::UpdateWithCamera(float deltaTime, Vector3 cameraForward, Vector3 ca
 
         m_speed = originalSpeed;
         m_rotationAngle = atan2f(movement.x, movement.z) * RAD2DEG;
+    }
+}
+
+void Player::StartDash(Vector3 direction) {
+    if (!CanDash() || Vector3Length(direction) == 0) return;
+    
+    TraceLog(LOG_INFO, "StartDash called: stamina=%f, duration=%f, boost=%f", 
+             m_stamina, DASH_DURATION, DASH_SPEED_BOOST);
+    
+    // Check stamina
+    if (m_stamina >= DASH_STAMINA_COST) {
+        // Normal dash - consume stamina
+        m_stamina -= DASH_STAMINA_COST;
+        m_isDashing = true;
+        m_dashTimer = DASH_DURATION;
+        m_dashDirection = Vector3Normalize(direction);
+    } else if (m_stamina < DASH_STAMINA_COST) {
+        // Not enough stamina - consume time instead
+        m_time -= STAMINA_DEPLETED_TIME_COST;
+        if (m_time < 0) m_time = 0;
+        
+        // Still allow the dash but use remaining stamina
+        m_stamina = 0;
+        m_isDashing = true;
+        m_dashTimer = DASH_DURATION;
+        m_dashDirection = Vector3Normalize(direction);
     }
 }
 
