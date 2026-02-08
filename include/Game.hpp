@@ -1,5 +1,6 @@
 #pragma once
 #include "GameState.hpp"
+#include "BossState.hpp"
 #include "Player.hpp"
 #include "Boss.hpp"
 #include "Tomato.hpp"
@@ -85,7 +86,7 @@ private:
     
     // Game logic helpers
     void HandlePlayerAttack();
-    void HandleBossAttack();
+    void HandleBossAttack(BossState attackType);
     void UpdateProjectiles(float deltaTime);
     void UpdateTomatoes(float deltaTime);
     void CheckTomatoCollection();

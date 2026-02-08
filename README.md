@@ -30,9 +30,11 @@ A raylib game where time is your health! Fight a boss whose HP is represented by
 ### Gameplay Tips
 - Use your fast projectile attacks to damage the boss from a distance!
 - Stay close to the boss for melee attacks, but dodge its projectiles!
+- **Watch out for boss AoE attacks** - keep your distance during ATTACK_2 and ATTACK_3!
+- ATTACK_2 has a 150-unit range, ATTACK_3 has a 200-unit range
 - Tomatoes spawn randomly on the ground - collect them to restore your time
 - Tomatoes disappear after 8 seconds if not collected
-- The boss shoots projectiles at you periodically
+- The boss alternates between projectile attacks and area attacks
 - Watch both timers - manage your time wisely!
 
 ## Building and Running
@@ -69,12 +71,16 @@ make clean
   - Two attack modes: melee (SPACE) and ranged projectiles (Left Click)
 - **Boss**: Animated Plant Boss (3D GLTF model) with smooth rotation and state machine
   - States: IDLE, ATTACK_1, ATTACK_2, ATTACK_3
+  - Attack patterns:
+    - ATTACK_1: Shoots a projectile at the player
+    - ATTACK_2: Area of Effect attack (150 unit range)
+    - ATTACK_3: Larger Area of Effect attack (200 unit range)
   - Smoothly rotates to face player
   - Compact hitbox (0.8x base size) matching visual scale
   - Positioned above ground level (y=5) to account for arena visual thickness
 - **Camera**: Adjusted closer view (200 distance, 150 height) for better perspective
 - **Tomatoes**: Red circles with green stems that appear randomly
-- **Boss Projectiles**: Orange circles that track your position
+- **Boss Projectiles**: Orange circles that track your position (only from ATTACK_1)
 - **Collision**: 3D rectangular AABB collision system
 - **Camera**: Third-person camera with mouse control (FPS-style locked cursor)
 
