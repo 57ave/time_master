@@ -63,10 +63,12 @@ make clean
 
 ## Game Design
 - **Player**: Blue rectangular character (AABB collision) with camera-relative movement
+  - Positioned above ground level (y=5) to account for arena visual thickness
 - **Boss**: Animated Plant Boss (3D GLTF model) with smooth rotation and state machine
   - States: IDLE, ATTACK_1, ATTACK_2, ATTACK_3
   - Smoothly rotates to face player
   - 2.5x player size
+  - Positioned above ground level (y=5) to account for arena visual thickness
 - **Tomatoes**: Red circles with green stems that appear randomly
 - **Boss Projectiles**: Orange circles that track your position
 - **Collision**: 3D rectangular AABB collision system

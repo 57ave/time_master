@@ -74,8 +74,9 @@ void Boss::UnloadModel() {
 
 void Boss::Reset() {
     auto& config = GameConfig::GetInstance();
-    m_position = {200, ARENA_FLOOR_Y + (BOSS_HEIGHT * 2.5f / 2.0f), 0};  // On arena floor (centered on bottom)
     m_size = {BOSS_WIDTH * 2.5f, BOSS_HEIGHT * 2.5f, BOSS_DEPTH * 2.5f};  // 2.5x player size
+    float halfHeight = m_size.y / 2.0f;
+    m_position = {200, halfHeight + 5.0f, 0};  // Above ground to avoid visual collision with arena thickness
     m_time = config.bossStartingTime;
     m_isAlive = true;
     m_attackCooldown = 0.0f;
@@ -286,16 +287,16 @@ void Boss::Draw() const {
         Vector3 modelScale = {uniformScale, uniformScale, uniformScale};
         
         // Adjust position to place model on ground
-        // The boss hitbox center is at m_position (200, 0, 0)
-        // But we want the model's bottom to touch the ground (y=0)
+        // The boss hitbox center is at m_position (200, halfHeight + 5.0f, 0)
+        // We want the model's bottom to be above y=0 to account for arena visual thickness
         Vector3 drawPosition = m_position;
         
         // Calculate where the bottom of the scaled model would be relative to its center
         float scaledModelBottom = bounds.min.y * uniformScale;
         
-        // The model should be drawn so its bottom is at y=0 (ground level)
-        // Since the model's center is at origin, we need to lift it by -scaledModelBottom
-        drawPosition.y = -scaledModelBottom;
+        // The model should be drawn so its bottom is above ground (y=5.0) to clear arena thickness
+        // Since the model's center is at origin, we need to lift it by -scaledModelBottom + 5.0
+        drawPosition.y = -scaledModelBottom + 5.0f;
         
         // Keep X and Z from m_position for horizontal placement
         drawPosition.x = m_position.x;

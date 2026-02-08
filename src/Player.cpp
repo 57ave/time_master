@@ -10,9 +10,10 @@ Player::Player() {
 
 void Player::Reset() {
     auto& config = GameConfig::GetInstance();
-    m_position = {-200, 100, 0};  // Start above arena to fall with gravity
+    m_size = {40.0f / 3.0f, 60.0f / 3.0f, 40.0f / 3.0f};  // Width, Height, Depth - Divided by 3 to make player smaller
+    float halfHeight = m_size.y / 2.0f;
+    m_position = {-200, halfHeight + 5.0f, 0};  // Above ground to account for arena visual thickness
     m_velocity = {0, 0, 0};  // No initial velocity
-    m_size = {40.0f, 60.0f, 40.0f};  // Width, Height, Depth - Rectangle!
     m_speed = config.playerSpeed;
     m_time = config.playerStartingTime;
     m_isAlive = true;
@@ -40,9 +41,9 @@ void Player::Update(float deltaTime) {
     float halfHeight = m_size.y / 2.0f;
     float bottomY = m_position.y - halfHeight;
     
-    if (bottomY <= ARENA_FLOOR_Y) {
-        // Player hit the ground
-        m_position.y = ARENA_FLOOR_Y + halfHeight;
+    if (bottomY <= 5.0f) {
+        // Player hit the ground (above y=0 to account for arena visual thickness)
+        m_position.y = halfHeight + 5.0f;
         m_velocity.y = 0;  // Stop falling
     }
 }
