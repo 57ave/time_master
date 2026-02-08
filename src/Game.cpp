@@ -8,6 +8,8 @@ namespace TimeMaster {
 
 Game::Game() 
     : m_state(GameState::MENU)
+    , m_arenaModel{0}
+    , m_arenaModelLoaded(false)
     , m_tomatoSpawnTimer(0.0f)
     , m_playerAttackCooldown(0.0f)
     , m_selectedSetting(0) {
@@ -16,6 +18,17 @@ Game::Game()
     
     // Load static assets
     Tomato::LoadModel();
+    
+    // Load arena model
+    m_arenaModel = LoadModel("assets/models/arena/scene.gltf");
+    if (m_arenaModel.meshCount > 0 && m_arenaModel.meshes != nullptr) {
+        m_arenaModelLoaded = true;
+        TraceLog(LOG_INFO, "Arena model loaded successfully");
+    } else {
+        TraceLog(LOG_WARNING, "Failed to load arena model - using fallback rendering");
+        m_arenaModel = (Model){0};
+        m_arenaModelLoaded = false;
+    }
     
     // Initialize systems
     m_cameraManager = std::make_unique<CameraManager>();
@@ -47,6 +60,11 @@ Game::Game()
 Game::~Game() {
     // Unload static assets
     Tomato::UnloadModel();
+    
+    // Unload arena model
+    if (m_arenaModelLoaded) {
+        UnloadModel(m_arenaModel);
+    }
 }
 
 void Game::Init() {
@@ -496,22 +514,27 @@ void Game::SpawnTomato() {
         if (!tomato->IsActive()) {
             float x = static_cast<float>(GetRandomValue(-ARENA_SIZE + 50, ARENA_SIZE - 50));
             float z = static_cast<float>(GetRandomValue(-ARENA_SIZE + 50, ARENA_SIZE - 50));
-            tomato->Spawn(x, 30.0f, z);  // Match player height for easier collection
+            tomato->Spawn(x, ARENA_FLOOR_Y + TOMATO_RADIUS, z);  // Spawn on arena floor
             break;
         }
     }
 }
 
 void Game::DrawArena() const {
-    // Draw floor
-    DrawPlane({0.0f, 0.0f, 0.0f}, {ARENA_SIZE * 2, ARENA_SIZE * 2}, LIGHTGRAY);
-    DrawGrid(40, 50.0f);
-    
-    // Draw arena walls
-    DrawCubeWires({0, 50, -ARENA_SIZE}, ARENA_SIZE * 2, 100, 2, DARKGRAY);
-    DrawCubeWires({0, 50, ARENA_SIZE}, ARENA_SIZE * 2, 100, 2, DARKGRAY);
-    DrawCubeWires({-ARENA_SIZE, 50, 0}, 2, 100, ARENA_SIZE * 2, DARKGRAY);
-    DrawCubeWires({ARENA_SIZE, 50, 0}, 2, 100, ARENA_SIZE * 2, DARKGRAY);
+    if (m_arenaModelLoaded) {
+        // Draw the 3D arena model much lower to account for model's center/top origin
+        DrawModel(m_arenaModel, {0.0f, ARENA_MODEL_Y, 0.0f}, 1.0f, WHITE);
+    } else {
+        // Fallback to simple arena rendering
+        DrawPlane({0.0f, ARENA_FLOOR_Y, 0.0f}, {ARENA_SIZE * 2, ARENA_SIZE * 2}, LIGHTGRAY);
+        DrawGrid(40, 50.0f);
+        
+        // Draw arena walls
+        DrawCubeWires({0, 50, -ARENA_SIZE}, ARENA_SIZE * 2, 100, 2, DARKGRAY);
+        DrawCubeWires({0, 50, ARENA_SIZE}, ARENA_SIZE * 2, 100, 2, DARKGRAY);
+        DrawCubeWires({-ARENA_SIZE, 50, 0}, 2, 100, ARENA_SIZE * 2, DARKGRAY);
+        DrawCubeWires({ARENA_SIZE, 50, 0}, 2, 100, ARENA_SIZE * 2, DARKGRAY);
+    }
 }
 
 void Game::TransitionTo(GameState newState) {

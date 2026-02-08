@@ -154,4 +154,32 @@ inline bool CheckAABBSphereCollision(const AABB& box, Vector3 sphereCenter, floa
     return distanceSquared <= (sphereRadius * sphereRadius);
 }
 
+/**
+ * @brief Constrain an AABB within arena boundaries
+ * @param aabb The bounding box to constrain
+ * @param arenaSize Half-size of the square arena
+ * @return The position adjustment needed to keep AABB inside arena
+ */
+inline Vector3 ConstrainAABBToArena(const AABB& aabb, float arenaSize) {
+    Vector3 adjustment = {0, 0, 0};
+    
+    // Check and constrain X axis
+    if (aabb.min.x < -arenaSize) {
+        adjustment.x = -arenaSize - aabb.min.x;
+    } else if (aabb.max.x > arenaSize) {
+        adjustment.x = arenaSize - aabb.max.x;
+    }
+    
+    // Check and constrain Z axis
+    if (aabb.min.z < -arenaSize) {
+        adjustment.z = -arenaSize - aabb.min.z;
+    } else if (aabb.max.z > arenaSize) {
+        adjustment.z = arenaSize - aabb.max.z;
+    }
+    
+    // Y axis typically not constrained for ground-based movement
+    
+    return adjustment;
+}
+
 } // namespace TimeMaster

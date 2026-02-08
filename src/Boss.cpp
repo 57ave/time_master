@@ -61,7 +61,7 @@ void Boss::UnloadModel() {
 
 void Boss::Reset() {
     auto& config = GameConfig::GetInstance();
-    m_position = {200, 0, 0};  // Y at 0 for ground level
+    m_position = {200, ARENA_FLOOR_Y + (BOSS_HEIGHT * 2.5f / 2.0f), 0};  // On arena floor (centered on bottom)
     m_size = {BOSS_WIDTH * 2.5f, BOSS_HEIGHT * 2.5f, BOSS_DEPTH * 2.5f};  // 2.5x player size
     m_time = config.bossStartingTime;
     m_isAlive = true;
@@ -324,8 +324,8 @@ void Boss::ApplyPushback(Vector3 pushback) {
     float halfWidth = m_size.x / 2.0f;
     float halfDepth = m_size.z / 2.0f;
     
-    m_position.x = Clamp(m_position.x, -ARENA_SIZE / 2 + halfWidth, ARENA_SIZE / 2 - halfWidth);
-    m_position.z = Clamp(m_position.z, -ARENA_SIZE / 2 + halfDepth, ARENA_SIZE / 2 - halfDepth);
+    m_position.x = Clamp(m_position.x, -ARENA_SIZE + halfWidth, ARENA_SIZE - halfWidth);
+    m_position.z = Clamp(m_position.z, -ARENA_SIZE + halfDepth, ARENA_SIZE - halfDepth);
 }
 
 bool Boss::CheckCollisionWithPlayer(const Player& player) const {

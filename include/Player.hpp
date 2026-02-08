@@ -9,6 +9,7 @@ namespace TimeMaster {
 class Player : public Entity, public IDamageable, public ITimedEntity {
 private:
     Vector3 m_position;
+    Vector3 m_velocity;     // Velocity for physics (gravity)
     Vector3 m_size;         // Width, Height, Depth of hitbox
     float m_speed;
     float m_time;
