@@ -1,6 +1,7 @@
 #include "Player.hpp"
 #include "raymath.h"
 #include <cstdio>
+#include <cstring>
 
 namespace TimeMaster {
 
@@ -15,6 +16,7 @@ Player::Player()
     , m_currentAnimIndex(-1)
     , m_animTimer(0.0f)
     , m_isMoving(false)
+    , m_isRunning(false)
     , m_rotationAngle(0.0f) {
     Reset();
 }
@@ -25,12 +27,18 @@ Player::~Player() {
 
 void Player::LoadModel() {
     if (!s_modelLoaded) {
-        const char* modelPath = "assets/models/player/source/model.gltf";
+        const char* modelPath = "assets/models/player/scene.gltf";
         s_model = ::LoadModel(modelPath);
         if (s_model.meshCount > 0 && s_model.meshes != nullptr) {
             s_animations = ::LoadModelAnimations(modelPath, &s_animationCount);
             s_modelLoaded = true;
             TraceLog(LOG_INFO, "Player model loaded successfully with %d animations", s_animationCount);
+            
+            // Log animation names for debugging
+            for (int i = 0; i < s_animationCount; i++) {
+                TraceLog(LOG_INFO, "  Animation %d: %s (%d frames)", i, s_animations[i].name, s_animations[i].frameCount);
+            }
+            
             TraceLog(LOG_INFO, "Player model has %d materials", s_model.materialCount);
             
             // The GLTF has embedded texture data, but we need to set the texture filter
@@ -79,6 +87,7 @@ void Player::Reset() {
     m_currentAnimIndex = -1;
     m_animTimer = 0.0f;
     m_isMoving = false;
+    m_isRunning = false;
     m_rotationAngle = 0.0f;
 }
 
@@ -113,8 +122,41 @@ void Player::Update(float deltaTime) {
     
     // Update animations
     if (s_modelLoaded && s_animationCount > 0) {
-        // Choose animation based on movement (0 = first animation, typically idle/walk)
-        int animIndex = 0;
+        // Find animations by name
+        static int idleAnimIndex = -1;
+        static int walkAnimIndex = -1;
+        static int runAnimIndex = -1;
+        
+        // Find animation indices on first call (cache them)
+        if (idleAnimIndex == -1) {
+            for (int i = 0; i < s_animationCount; i++) {
+                const char* name = s_animations[i].name;
+                if (strstr(name, "Idle") != nullptr || strstr(name, "idle") != nullptr) {
+                    idleAnimIndex = i;
+                    TraceLog(LOG_INFO, "Found Idle animation at index %d: %s", i, name);
+                }
+                if (strstr(name, "Walk") != nullptr || strstr(name, "walk") != nullptr) {
+                    walkAnimIndex = i;
+                    TraceLog(LOG_INFO, "Found Walk animation at index %d: %s", i, name);
+                }
+                if (strstr(name, "Run") != nullptr || strstr(name, "run") != nullptr) {
+                    runAnimIndex = i;
+                    TraceLog(LOG_INFO, "Found Run animation at index %d: %s", i, name);
+                }
+            }
+        }
+        
+        // Choose animation based on movement state
+        int animIndex = (idleAnimIndex >= 0) ? idleAnimIndex : 0;  // Default to idle
+        
+        if (m_isMoving) {
+            if (m_isRunning && runAnimIndex >= 0) {
+                animIndex = runAnimIndex;  // Run animation
+            } else if (walkAnimIndex >= 0) {
+                animIndex = walkAnimIndex;  // Walk animation
+            }
+        }
+        
         bool shouldLoop = true;  // Always loop player animations
         
         // Make sure animIndex is valid
@@ -263,6 +305,9 @@ void Player::UpdateWithCamera(float deltaTime, Vector3 cameraForward, Vector3 ca
     bool moveLeft = IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT);
     bool moveRight = IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT);
     
+    // Check if running (shift key)
+    m_isRunning = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
+    
     // Build movement vector relative to camera
     if (moveForward) {
         movement = Vector3Add(movement, cameraForward);
@@ -279,7 +324,14 @@ void Player::UpdateWithCamera(float deltaTime, Vector3 cameraForward, Vector3 ca
     
     // Apply movement if any input detected
     if (Vector3Length(movement) > 0) {
+        // Adjust speed for running
+        float currentSpeed = m_isRunning ? m_speed * 1.8f : m_speed;  // 1.8x speed when running
+        
+        // Temporarily set the speed and move
+        float originalSpeed = m_speed;
+        m_speed = currentSpeed;
         Move(Vector3Normalize(movement), deltaTime);
+        m_speed = originalSpeed;  // Restore original speed
     }
 }
 
