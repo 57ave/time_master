@@ -4,8 +4,59 @@
 
 namespace TimeMaster {
 
-Player::Player() {
+// Static member initialization
+Model Player::s_model = {0};
+bool Player::s_modelLoaded = false;
+ModelAnimation* Player::s_animations = nullptr;
+int Player::s_animationCount = 0;
+
+Player::Player() 
+    : m_currentAnimFrame(0)
+    , m_currentAnimIndex(-1)
+    , m_animTimer(0.0f)
+    , m_isMoving(false) {
     Reset();
+}
+
+Player::~Player() {
+    // Model is static and unloaded elsewhere
+}
+
+void Player::LoadModel() {
+    if (!s_modelLoaded) {
+        const char* modelPath = "assets/models/player/scene.gltf";
+        s_model = ::LoadModel(modelPath);
+        if (s_model.meshCount > 0 && s_model.meshes != nullptr) {
+            s_animations = ::LoadModelAnimations(modelPath, &s_animationCount);
+            s_modelLoaded = true;
+            TraceLog(LOG_INFO, "Player model loaded successfully with %d animations", s_animationCount);
+            TraceLog(LOG_INFO, "Player model has %d materials", s_model.materialCount);
+            
+            // Debug: Check if materials have textures
+            for (int i = 0; i < s_model.materialCount; i++) {
+                if (s_model.materials[i].maps[MATERIAL_MAP_DIFFUSE].texture.id > 0) {
+                    TraceLog(LOG_INFO, "Material %d has diffuse texture (id: %d)", i, 
+                            s_model.materials[i].maps[MATERIAL_MAP_DIFFUSE].texture.id);
+                } else {
+                    TraceLog(LOG_WARNING, "Material %d has NO diffuse texture!", i);
+                }
+            }
+        } else {
+            TraceLog(LOG_WARNING, "Failed to load player model - using fallback rendering");
+            s_model = (Model){0};
+            s_modelLoaded = false;
+        }
+    }
+}
+
+void Player::UnloadModel() {
+    if (s_modelLoaded) {
+        ::UnloadModel(s_model);
+        if (s_animations) {
+            ::UnloadModelAnimations(s_animations, s_animationCount);
+        }
+        s_modelLoaded = false;
+    }
 }
 
 void Player::Reset() {
@@ -18,6 +69,12 @@ void Player::Reset() {
     m_time = config.playerStartingTime;
     m_isAlive = true;
     m_color = BLUE;
+    
+    // Reset animation state
+    m_currentAnimFrame = 0;
+    m_currentAnimIndex = -1;
+    m_animTimer = 0.0f;
+    m_isMoving = false;
 }
 
 void Player::Update(float deltaTime) {
@@ -29,7 +86,9 @@ void Player::Update(float deltaTime) {
     if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) movement.x += 1;  // A = Right
     if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) movement.x -= 1; // D = Left
     
-    if (Vector3Length(movement) > 0) {
+    m_isMoving = (Vector3Length(movement) > 0);
+    
+    if (m_isMoving) {
         Move(Vector3Normalize(movement), deltaTime);
     }
     
@@ -45,6 +104,37 @@ void Player::Update(float deltaTime) {
         // Player hit the ground (above y=0 to account for arena visual thickness)
         m_position.y = halfHeight + 5.0f;
         m_velocity.y = 0;  // Stop falling
+    }
+    
+    // Update animations
+    if (s_modelLoaded && s_animationCount > 0) {
+        // Choose animation: 0 = idle/walk (we'll use first animation)
+        int animIndex = 0;
+        
+        if (animIndex != m_currentAnimIndex) {
+            m_currentAnimIndex = animIndex;
+            m_currentAnimFrame = 0;
+            m_animTimer = 0.0f;
+        }
+        
+        // Update animation frame
+        if (m_currentAnimIndex >= 0 && m_currentAnimIndex < s_animationCount) {
+            m_animTimer += deltaTime;
+            float frameTime = 1.0f / 30.0f;  // Assume 30 FPS animation
+            
+            if (m_animTimer >= frameTime) {
+                m_animTimer = 0.0f;
+                m_currentAnimFrame++;
+                
+                // Loop animation
+                if (m_currentAnimFrame >= s_animations[m_currentAnimIndex].frameCount) {
+                    m_currentAnimFrame = 0;
+                }
+                
+                // Apply animation frame to model
+                UpdateModelAnimation(s_model, s_animations[m_currentAnimIndex], m_currentAnimFrame);
+            }
+        }
     }
 }
 
@@ -81,9 +171,23 @@ void Player::ApplyPushback(Vector3 pushback) {
 void Player::Draw() const {
     if (!m_isAlive) return;
     
-    // Draw rectangular hitbox instead of sphere
-    DrawCube(m_position, m_size.x, m_size.y, m_size.z, m_color);
-    DrawCubeWires(m_position, m_size.x, m_size.y, m_size.z, DARKBLUE);
+    if (s_modelLoaded) {
+        // Calculate scale to match the hitbox size
+        float scale = m_size.y;  // Use height as the primary scaling factor
+        
+        // Draw the 3D player model
+        // Position the model at player position
+        Vector3 drawPos = m_position;
+        drawPos.y -= m_size.y / 2.0f;  // Adjust for model origin (base of model)
+        
+        // Use RAYWHITE (slightly off-white) or try without tint override
+        // DrawModel uses the model's materials directly
+        DrawModel(s_model, drawPos, scale, WHITE);
+    } else {
+        // Fallback: Draw rectangular hitbox
+        DrawCube(m_position, m_size.x, m_size.y, m_size.z, m_color);
+        DrawCubeWires(m_position, m_size.x, m_size.y, m_size.z, DARKBLUE);
+    }
     
     // Optional: Draw AABB debug
     // GetAABB().DrawDebug(GREEN);

@@ -16,8 +16,31 @@ private:
     bool m_isAlive;
     Color m_color;
     
+    // Animation state
+    int m_currentAnimFrame;
+    int m_currentAnimIndex;
+    float m_animTimer;
+    bool m_isMoving;
+    
+    // Static model (shared by all players, though typically only one exists)
+    static Model s_model;
+    static bool s_modelLoaded;
+    static ModelAnimation* s_animations;
+    static int s_animationCount;
+    
 public:
     Player();
+    ~Player();
+    
+    /**
+     * @brief Load shared player model (call once)
+     */
+    static void LoadModel();
+    
+    /**
+     * @brief Unload shared player model (call once on cleanup)
+     */
+    static void UnloadModel();
     
     // Entity interface
     void Update(float deltaTime) override;

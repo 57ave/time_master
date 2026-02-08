@@ -17,6 +17,7 @@ Game::Game()
     srand(static_cast<unsigned int>(time(nullptr)));
     
     // Load static assets
+    Player::LoadModel();
     Tomato::LoadModel();
     
     // Load arena model
@@ -59,6 +60,7 @@ Game::Game()
 
 Game::~Game() {
     // Unload static assets
+    Player::UnloadModel();
     Tomato::UnloadModel();
     
     // Unload arena model
