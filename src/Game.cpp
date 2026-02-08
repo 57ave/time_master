@@ -336,7 +336,7 @@ void Game::UpdatePlaying() {
          bossState == BossState::ATTACK_2 || 
          bossState == BossState::ATTACK_3) && 
         m_boss->ShouldTriggerAttack()) {
-        HandleBossAttack();
+        HandleBossAttack(bossState);
         m_boss->MarkAttackTriggered();
     }
     
@@ -479,12 +479,52 @@ void Game::HandlePlayerAttack() {
     }
 }
 
-void Game::HandleBossAttack() {
-    for (auto& projectile : m_projectiles) {
-        if (!projectile->IsActive()) {
-            projectile->Launch(m_boss->GetPosition(), m_player->GetPosition());
+void Game::HandleBossAttack(BossState attackType) {
+    auto& config = GameConfig::GetInstance();
+    
+    switch (attackType) {
+        case BossState::ATTACK_1:
+            // Attack 1: Single projectile toward player
+            for (auto& projectile : m_projectiles) {
+                if (!projectile->IsActive()) {
+                    projectile->Launch(m_boss->GetPosition(), m_player->GetPosition());
+                    break;
+                }
+            }
             break;
-        }
+            
+        case BossState::ATTACK_2:
+            // Attack 2: Area of Effect - damages player if in range
+            {
+                Vector3 bossPos = m_boss->GetPosition();
+                Vector3 playerPos = m_player->GetPosition();
+                float distance = Vector3Distance(bossPos, playerPos);
+                float aoeRange = 150.0f; // AoE range
+                
+                if (distance <= aoeRange && m_player->IsAlive()) {
+                    m_player->TakeDamage(config.playerDamagePerHit);
+                    printf("Boss ATTACK_2: AoE hit! Distance: %.2f\n", distance);
+                }
+            }
+            break;
+            
+        case BossState::ATTACK_3:
+            // Attack 3: Larger Area of Effect
+            {
+                Vector3 bossPos = m_boss->GetPosition();
+                Vector3 playerPos = m_player->GetPosition();
+                float distance = Vector3Distance(bossPos, playerPos);
+                float aoeRange = 200.0f; // Larger AoE range
+                
+                if (distance <= aoeRange && m_player->IsAlive()) {
+                    m_player->TakeDamage(config.playerDamagePerHit);
+                    printf("Boss ATTACK_3: Large AoE hit! Distance: %.2f\n", distance);
+                }
+            }
+            break;
+            
+        default:
+            break;
     }
 }
 
