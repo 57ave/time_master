@@ -13,6 +13,7 @@ class Player;
 class Boss : public Entity, public IDamageable, public ITimedEntity {
 private:
     // Position and physics
+    float m_moveSpeed;
     Vector3 m_position;
     Vector3 m_velocity;
     Vector3 m_size;  // Width, Height, Depth (for hitbox)
@@ -51,6 +52,7 @@ private:
     void UpdateState(float deltaTime);
     void LoadModel();
     void UnloadModel();
+    void MoveTowards(const Vector3& target, float deltaTime);
     
 public:
     Boss();

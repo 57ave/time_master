@@ -8,7 +8,8 @@
 namespace TimeMaster {
 
 Boss::Boss() 
-    : m_targetRotation(0.0f)
+    : m_moveSpeed(40.0f) 
+    , m_targetRotation(0.0f)
     , m_currentRotation(0.0f)
     , m_rotationSpeed(3.0f)
     , m_currentState(BossState::IDLE)
@@ -184,6 +185,9 @@ void Boss::Update(float deltaTime) {
 void Boss::UpdateWithPlayer(Vector3 playerPosition, float deltaTime) {
     Update(deltaTime);
     UpdateRotation(playerPosition, deltaTime);
+    if (m_currentState == BossState::IDLE) {
+        MoveTowards(playerPosition, deltaTime);
+    }
 }
 
 void Boss::UpdateRotation(Vector3 playerPosition, float deltaTime) {
@@ -372,6 +376,23 @@ std::string Boss::GetTimeString() const {
     char buffer[32];
     snprintf(buffer, sizeof(buffer), "%d:%02d", minutes, seconds);
     return std::string(buffer);
+}
+
+void Boss::MoveTowards(const Vector3& target, float deltaTime) {
+    Vector3 direction = Vector3Subtract(target, m_position);
+    direction.y = 0; // on ne change pas la hauteur
+
+    float distance = Vector3Length(direction);
+    if (distance > 0.1f) { // éviter division par 0
+        Vector3 moveDir = Vector3Scale(Vector3Normalize(direction), m_moveSpeed * deltaTime);
+        
+        // ne pas dépasser la cible
+        if (Vector3Length(moveDir) > distance) {
+            moveDir = Vector3Scale(Vector3Normalize(direction), distance);
+        }
+
+        ApplyPushback(moveDir);
+    }
 }
 
 } // namespace TimeMaster
